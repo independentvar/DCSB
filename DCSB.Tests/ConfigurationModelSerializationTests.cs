@@ -32,7 +32,7 @@ namespace DCSB.Tests
                 Enable = DisplayOption.Counters
             };
             Preset preset = new Preset { Name = "Speedrun" };
-            preset.CounterCollection.Add(new Counter { Name = "Deaths", Count = 17 });
+            preset.CounterCollection.Add(new Counter { Name = "Deaths", Increment = 5, Format = "Deaths: {0}", Count = 17 });
             model.PresetCollection.Add(preset);
 
             ConfigurationModel loaded = RoundTrip(model);
@@ -45,8 +45,12 @@ namespace DCSB.Tests
             Assert.AreEqual(1, loaded.PresetCollection.Count);
             Assert.AreEqual("Speedrun", loaded.PresetCollection[0].Name);
             Assert.AreEqual(1, loaded.PresetCollection[0].CounterCollection.Count);
-            Assert.AreEqual("Deaths", loaded.PresetCollection[0].CounterCollection[0].Name);
-            Assert.AreEqual(17, loaded.PresetCollection[0].CounterCollection[0].Count);
+            Counter loadedCounter = loaded.PresetCollection[0].CounterCollection[0];
+            Assert.AreEqual("Deaths", loadedCounter.Name);
+            Assert.AreEqual(5, loadedCounter.Increment);
+            Assert.AreEqual("Deaths: {0}", loadedCounter.Format);
+            // Count is [XmlIgnore]: it is persisted via the counter's output file, not the config
+            Assert.AreEqual(0, loadedCounter.Count);
         }
 
         [TestMethod]
