@@ -6,7 +6,7 @@ namespace DCSB.Input
     {
         static internal RegistryKey GetDeviceKey(string device)
         {
-            if (device.Length < 4)
+            if (device == null || device.Length < 4)
                 return null;
 
             var split = device.Substring(4).Split('#');
