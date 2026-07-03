@@ -23,12 +23,20 @@ jobs:
         run: nuget restore DCSB.sln
 
       # The projects target .NET Framework 4.5.2, whose targeting pack is not
-      # installed on GitHub runners. Use the reference assemblies from NuGet.
+      # installed on GitHub runners. Install the reference assemblies from NuGet
+      # into the standard targeting-pack location so MSBuild resolves them
+      # (including the Facades folder) like a normal targeting pack.
       - name: Install .NET Framework 4.5.2 reference assemblies
-        run: nuget install Microsoft.NETFramework.ReferenceAssemblies.net452 -Version 1.0.3 -OutputDirectory refpacks
+        shell: pwsh
+        run: |
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net452 -Version 1.0.3 -OutputDirectory refpacks
+          $source = "refpacks\Microsoft.NETFramework.ReferenceAssemblies.net452.1.0.3\build\.NETFramework\v4.5.2"
+          $target = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2"
+          New-Item -ItemType Directory -Force $target | Out-Null
+          Copy-Item "$source\*" $target -Recurse -Force
 
       - name: Build
-        run: msbuild DCSB.sln /p:Configuration=Release /p:FrameworkPathOverride="${{ github.workspace }}\refpacks\Microsoft.NETFramework.ReferenceAssemblies.net452.1.0.3\build\.NETFramework\v4.5.2" /m /verbosity:minimal
+        run: msbuild DCSB.sln /p:Configuration=Release /m /verbosity:minimal
 
       - name: Read version from built executable
         id: version
