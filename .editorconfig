@@ -1,0 +1,23 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+# usings sorted alphabetically, not System-first (matches existing code)
+dotnet_sort_system_directives_first = false
+csharp_new_line_before_open_brace = all
+dotnet_style_qualification_for_field = false:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = false:suggestion
+
+[*.{xaml,csproj,config,nsi}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
