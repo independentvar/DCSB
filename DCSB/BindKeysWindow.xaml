@@ -14,7 +14,10 @@
         BorderThickness="1">
 
     <StackPanel>
-        <Label>Press keys you want to bind.</Label>
+        <StackPanel Margin="5,0">
+            <Label Padding="0,5,0,0">Press keys or mouse buttons you want to bind.</Label>
+            <Label Padding="0,0,0,5">(mouse clicks on this window are ignored)</Label>
+        </StackPanel>
         <StackPanel Orientation="Horizontal"
                     FlowDirection="RightToLeft">
             <Button Margin="5" Width="50" Command="{Binding CancelBindKeysCommand}">Cancel</Button>

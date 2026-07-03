@@ -51,6 +51,7 @@
     <Compile Include="KeyboardInput.cs" />
     <Compile Include="KeyMapper.cs" />
     <Compile Include="KeyPressEvent.cs" />
+    <Compile Include="MouseInput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RawInput.cs" />
     <Compile Include="RawKeyboard.cs" />

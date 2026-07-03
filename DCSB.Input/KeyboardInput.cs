@@ -30,6 +30,7 @@ namespace DCSB.Input
         private bool shiftNumpadCorrection;
         private Timer shiftNumpadTimer = new Timer();
         private RawInput rawInput;
+        private MouseInput mouseInput;
 
         private List<VKey> pressedKeys = new List<VKey>();
 
@@ -38,6 +39,10 @@ namespace DCSB.Input
             rawInput = new RawInput(handle);
             
             rawInput.KeyPressed += OnKeyPressed;
+
+            mouseInput = new MouseInput();
+            mouseInput.ButtonDown += Key_Down;
+            mouseInput.ButtonUp += Key_Up;
 
             shiftNumpadTimer.Elapsed += (x, y) => {
                 if (shiftNumpadCorrection)

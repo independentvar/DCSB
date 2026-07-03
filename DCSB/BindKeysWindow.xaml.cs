@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using System.Windows.Interop;
+using DCSB.Input;
 
 namespace DCSB
 {
@@ -22,6 +13,18 @@ namespace DCSB
         public BindKeysWindow()
         {
             InitializeComponent();
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            MouseInput.ExcludedWindowHandle = new WindowInteropHelper(this).Handle;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            MouseInput.ExcludedWindowHandle = IntPtr.Zero;
+            base.OnClosed(e);
         }
     }
 }
