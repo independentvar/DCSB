@@ -92,6 +92,23 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void Save_WhenTempFileIsLocked_DoesNotThrowAndRecovers()
+        {
+            Directory.CreateDirectory(_configDirectory);
+            string tempPath = Path.Combine(_configDirectory, "config_tmp.xml");
+            using (new FileStream(tempPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            {
+                // another process (second DCSB instance, antivirus) holds config_tmp.xml;
+                // the flushed save must fail silently instead of crashing
+                Save(new ConfigurationModel { Volume = 10 });
+            }
+
+            Save(new ConfigurationModel { Volume = 20 });
+
+            Assert.AreEqual(20, new ConfigurationManager(_configDirectory).Load().Volume);
+        }
+
+        [TestMethod]
         public void Load_WithCorruptConfigFile_ReturnsDefaultsAndMovesFileAside()
         {
             Directory.CreateDirectory(_configDirectory);

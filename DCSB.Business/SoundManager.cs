@@ -2,6 +2,7 @@
 using DCSB.SoundPlayer;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace DCSB.Business
@@ -118,7 +119,19 @@ namespace DCSB.Business
                 return "Disabled";
             }
 
-            soundPlayer = new AudioPlaybackEngine(device.Key);
+            try
+            {
+                soundPlayer = new AudioPlaybackEngine(device.Key);
+            }
+            catch (Exception e)
+            {
+                // opening the device can fail (e.g. NAudio.MmException: AlreadyAllocated when
+                // another application holds it exclusively) - disable the output instead of
+                // crashing on startup
+                Debug.WriteLine(e);
+                soundPlayer = null;
+                return "Disabled";
+            }
             return device.Value;
         }
 
