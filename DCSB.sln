@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCSB.Interactivity", "DCSB.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCSB.SoundPlayer", "DCSB.Sound\DCSB.SoundPlayer.csproj", "{F353EF29-363C-4694-B5C1-F90A2D48B126}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCSB.Tests", "DCSB.Tests\DCSB.Tests.csproj", "{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Installer scripts", "Installer scripts", "{2D2E4E54-3E34-4134-A70B-91190F1E29BB}"
 	ProjectSection(SolutionItems) = preProject
 		Installer scripts\CreateInstaller.nsi = Installer scripts\CreateInstaller.nsi
@@ -193,6 +195,18 @@ Global
 		{F353EF29-363C-4694-B5C1-F90A2D48B126}.Release|x64.Build.0 = Release|Any CPU
 		{F353EF29-363C-4694-B5C1-F90A2D48B126}.Release|x86.ActiveCfg = Release|Any CPU
 		{F353EF29-363C-4694-B5C1-F90A2D48B126}.Release|x86.Build.0 = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|x64.Build.0 = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Debug|x86.Build.0 = Debug|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|x64.ActiveCfg = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|x64.Build.0 = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|x86.ActiveCfg = Release|Any CPU
+		{9E3B7A44-6C21-4E85-9F3D-2B8A5C71D0E4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

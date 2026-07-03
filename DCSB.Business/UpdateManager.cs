@@ -138,7 +138,16 @@ namespace DCSB.Business
 
         private Version ParseVersion(Release release)
         {
-            Match match = Regex.Match(release.TagName, @"\d+\.\d+\.\d+\.\d+");
+            return ParseVersion(release.TagName);
+        }
+
+        public static Version ParseVersion(string tagName)
+        {
+            Match match = Regex.Match(tagName, @"\d+\.\d+\.\d+\.\d+");
+            if (!match.Success)
+            {
+                throw new FormatException($"Tag name '{tagName}' does not contain a four-part version number.");
+            }
             return Version.Parse(match.Value);
         }
     }

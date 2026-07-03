@@ -50,6 +50,15 @@ jobs:
       - name: Build
         run: msbuild DCSB.sln /p:Configuration=Release /m /verbosity:minimal
 
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vstest = & $vswhere -latest -products * -find 'Common7\IDE\Extensions\TestPlatform\vstest.console.exe' | Select-Object -First 1
+          if (-not $vstest) { throw "vstest.console.exe not found" }
+          & $vstest "DCSB.Tests\bin\Release\DCSB.Tests.dll" /TestAdapterPath:"packages\MSTest.TestAdapter.2.2.10\build\_common" /logger:trx
+          exit $LASTEXITCODE
+
       - name: Read version from built executable
         id: version
         shell: pwsh
