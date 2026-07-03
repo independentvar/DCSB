@@ -46,6 +46,13 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $version"
 
+      # NAudio.Vorbis.dll was compiled against NVorbis 0.8.4.0 but the package
+      # ships 0.8.5.0, so MSBuild does not copy NVorbis.dll transitively into
+      # the app output. Copy it explicitly so the installer can pick it up.
+      - name: Copy NVorbis.dll to build output
+        shell: pwsh
+        run: Copy-Item packages\NVorbis.*\lib\NVorbis.dll DCSB\bin\Release\ -Force
+
       - name: Install NSIS
         run: choco install nsis -y --no-progress
 
