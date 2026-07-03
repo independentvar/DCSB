@@ -46,6 +46,9 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $version"
 
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
       - name: Build installer
         working-directory: Installer scripts
         shell: pwsh
