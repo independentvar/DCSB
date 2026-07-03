@@ -19,8 +19,13 @@ namespace DCSB.Business
         private readonly string TempConfigPath;
         private readonly string BackupConfigPath;
 
+        private const int SaveDelay = 1000;
+        private const int MaxSaveAttempts = 5;
+
+        private readonly object _saveLock = new object();
         private Timer _timer;
         private ConfigurationModel _model;
+        private int _failedSaveAttempts;
 
         public ConfigurationManager()
             : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName))
@@ -35,6 +40,36 @@ namespace DCSB.Business
         }
 
         private void SaveCallback(object state)
+        {
+            lock (_saveLock)
+            {
+                if (_timer == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    WriteConfiguration();
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e);
+                    // config_tmp.xml may be locked by another DCSB instance or an antivirus scan;
+                    // an unhandled exception on the timer thread would crash the whole app
+                    if (++_failedSaveAttempts < MaxSaveAttempts)
+                    {
+                        _timer.Change(SaveDelay, Timeout.Infinite);
+                        return;
+                    }
+                }
+
+                _timer.Dispose();
+                _timer = null;
+            }
+        }
+
+        private void WriteConfiguration()
         {
             XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
 
@@ -57,8 +92,6 @@ namespace DCSB.Business
             }
 
             Debug.WriteLine("Saved configuration");
-            _timer.Dispose();
-            _timer = null;
         }
 
         public ConfigurationModel Load()
@@ -90,10 +123,14 @@ namespace DCSB.Business
 
         public void Save(ConfigurationModel model)
         {
-            _model = model;
-            if (_timer == null)
+            lock (_saveLock)
             {
-                _timer = new Timer(SaveCallback, null, 1000, Timeout.Infinite);
+                _model = model;
+                _failedSaveAttempts = 0;
+                if (_timer == null)
+                {
+                    _timer = new Timer(SaveCallback, null, SaveDelay, Timeout.Infinite);
+                }
             }
         }
 
@@ -128,10 +165,21 @@ namespace DCSB.Business
 
         public void Dispose()
         {
-            if (_timer != null)
+            lock (_saveLock)
             {
-                _timer.Dispose();
-                SaveCallback(null);
+                if (_timer != null)
+                {
+                    _timer.Dispose();
+                    _timer = null;
+                    try
+                    {
+                        WriteConfiguration();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine(e);
+                    }
+                }
             }
         }
     }
