@@ -61,6 +61,7 @@
     </Compile>
     <Compile Include="FileReader.cs" />
     <Compile Include="IAudioReader.cs" />
+    <Compile Include="MediaFoundationFileReader.cs" />
     <Compile Include="OggFileReader.cs" />
     <Compile Include="SampleReader.cs" />
     <Compile Include="AudioPlaybackEngine.cs" />
