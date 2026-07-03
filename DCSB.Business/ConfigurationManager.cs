@@ -15,12 +15,24 @@ namespace DCSB.Business
         private const string FileName = "config.xml";
         private const string TempFileName = "config_tmp.xml";
         private const string BackupFileName = "config_backup.xml";
-        private readonly string ConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName, FileName);
-        private readonly string TempConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName, TempFileName);
-        private readonly string BackupConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName, BackupFileName);
+        private readonly string ConfigPath;
+        private readonly string TempConfigPath;
+        private readonly string BackupConfigPath;
 
         private Timer _timer;
         private ConfigurationModel _model;
+
+        public ConfigurationManager()
+            : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName))
+        {
+        }
+
+        public ConfigurationManager(string configDirectory)
+        {
+            ConfigPath = Path.Combine(configDirectory, FileName);
+            TempConfigPath = Path.Combine(configDirectory, TempFileName);
+            BackupConfigPath = Path.Combine(configDirectory, BackupFileName);
+        }
 
         private void SaveCallback(object state)
         {
