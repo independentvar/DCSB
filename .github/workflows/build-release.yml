@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore DCSB.sln
+
+      # The projects target .NET Framework 4.5.2, whose targeting pack is not
+      # installed on GitHub runners. Use the reference assemblies from NuGet.
+      - name: Install .NET Framework 4.5.2 reference assemblies
+        run: nuget install Microsoft.NETFramework.ReferenceAssemblies.net452 -Version 1.0.3 -OutputDirectory refpacks
+
+      - name: Build
+        run: msbuild DCSB.sln /p:Configuration=Release /p:FrameworkPathOverride="${{ github.workspace }}\refpacks\Microsoft.NETFramework.ReferenceAssemblies.net452.1.0.3\build\.NETFramework\v4.5.2" /m /verbosity:minimal
+
+      - name: Read version from built executable
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Item "DCSB\bin\Release\DCSB.exe").VersionInfo.FileVersion
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version"
+
+      - name: Build installer
+        working-directory: Installer scripts
+        run: makensis CreateInstaller.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DCSB-installer
+          path: Installers/DCSB_*.exe
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: DCSB ${{ steps.version.outputs.version }}
+          files: Installers/DCSB_*.exe
+          generate_release_notes: true
