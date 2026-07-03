@@ -9,7 +9,7 @@ namespace DCSB.Business
 {
     public class UpdateManager
     {
-        private const string releasesUrl = "https://github.com/Kalejin/DCSB/releases";
+        private const string releasesUrl = "https://github.com/independentvar/DCSB/releases";
 
         public async Task AutoUpdateCheck(Version currentVersion)
         {
@@ -67,8 +67,8 @@ namespace DCSB.Business
         {
             try
             {
-                GitHubClient client = new GitHubClient(new ProductHeaderValue("Kalejin-DCSB"));
-                var releases = await client.Repository.Release.GetAll("Kalejin", "DCSB");
+                GitHubClient client = new GitHubClient(new ProductHeaderValue("independentvar-DCSB"));
+                var releases = await client.Repository.Release.GetAll("independentvar", "DCSB");
                 Match match = Regex.Match(releases[0].TagName, @"\d+\.\d+\.\d+\.\d+");
                 return Version.Parse(match.Value);
             }
