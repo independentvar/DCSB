@@ -193,7 +193,12 @@ namespace DCSB.Input
             if (deviceKey == null)
                 return null;
 
-            var deviceDesc = deviceKey.GetValue("DeviceDesc").ToString();
+            var deviceDescValue = deviceKey.GetValue("DeviceDesc");
+
+            if (deviceDescValue == null)
+                return null;
+
+            var deviceDesc = deviceDescValue.ToString();
             deviceDesc = deviceDesc.Substring(deviceDesc.IndexOf(';') + 1);
 
             //var deviceClass = RegistryAccess.GetClassType(deviceKey.GetValue("ClassGUID").ToString());
