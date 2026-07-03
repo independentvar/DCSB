@@ -2,6 +2,15 @@ name: Build and Release
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - LICENSE
+      - .gitignore
+      - '**.png'
+      - Installers/README.txt
+  # No path filter on pull_request: if this workflow is a required status
+  # check, a path-skipped run would leave PRs stuck at "Expected". The
+  # job-level guard below reports "skipped" instead, which counts as passing.
   pull_request:
   workflow_dispatch:
 

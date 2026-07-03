@@ -4,6 +4,15 @@ Deathcounter and Soundboard allows you to create keyboard shortcuts to trigger s
 
 ![Application screenshot](screenshot.png?raw=true "Main Window")
 
+## How to install
+1. Go to the [latest release page](https://github.com/independentvar/DCSB/releases/latest) and download the installer — the file named like `DCSB_4.1.0.0.exe` (under **Assets**).
+2. Run the downloaded file. If Windows shows a blue **"Windows protected your PC"** screen, click **More info** and then **Run anyway** — this appears because the installer isn't digitally signed, not because anything is wrong.
+3. If Windows asks **"Do you want to allow this app to make changes to your device?"**, click **Yes**.
+4. Follow the installer: click **Next**, pick an install folder (the suggested one is fine), and click **Install**.
+5. When it finishes, leave **Start Deathcounter and Soundboard** checked and click **Finish** — the app starts right away. Later you can find it in the Start Menu under **Deathcounter and Soundboard**.
+
+To update, just install a newer version the same way — it replaces the old one. To uninstall, use **Add or remove programs** in Windows Settings.
+
 ## For each counter you can set:
 - *Name* - to easily identify counters
 - *Path to text file* - file where current count is stored and can be used to display it on stream
