@@ -49,6 +49,11 @@ namespace DCSB.SoundPlayer
             {
                 input = new OggFileReader(fileName);
             }
+            catch (MmException)
+            {
+                // No ACM MP3 codec installed (e.g. Windows N editions) - decode via Media Foundation instead
+                input = new MediaFoundationFileReader(fileName);
+            }
 
             SampleReader reader = new SampleReader(input, loop);
             AddMixerInput(reader, volume);
