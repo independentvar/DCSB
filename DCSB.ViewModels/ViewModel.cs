@@ -9,6 +9,7 @@ using DCSB.Business;
 using DCSB.Input;
 using DCSB.Models;
 using DCSB.Utils;
+using System.IO;
 using System.Threading.Tasks;
 using System.Security.Principal;
 using System.Diagnostics;
@@ -496,6 +497,27 @@ namespace DCSB.ViewModels
             _configurationModel.SelectedPreset.SoundCollection.Add(sound);
             _applicationStateModel.ModifiedSound = sound;
             _applicationStateModel.SoundOpened = true;
+        }
+
+        private static readonly string[] _supportedSoundExtensions = { ".wma", ".mp3", ".wav", ".ogg", ".m4a", ".aiff", ".flac" };
+
+        public ICommand DropSoundFilesCommand
+        {
+            get { return new RelayCommand<string[]>(DropSoundFiles, files => AreSoundsEnabled()); }
+        }
+        private void DropSoundFiles(string[] files)
+        {
+            foreach (string file in files)
+            {
+                if (Array.IndexOf(_supportedSoundExtensions, Path.GetExtension(file).ToLowerInvariant()) < 0)
+                {
+                    continue;
+                }
+                Sound sound = new Sound() { Name = Path.GetFileNameWithoutExtension(file) };
+                sound.Files.Add(file);
+                _configurationModel.SelectedPreset.SoundCollection.Add(sound);
+                _configurationModel.SelectedPreset.SelectedSound = sound;
+            }
         }
 
         public ICommand RemoveSoundCommand
