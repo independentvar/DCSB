@@ -135,7 +135,7 @@ namespace DCSB.Business
             return device.Value;
         }
 
-        private string ChangeDevice(string deviceName, float deviceVolume, ref AudioPlaybackEngine soundPlayer)
+        private string ChangeDevice(string deviceName, float deviceVolume, bool primary, ref AudioPlaybackEngine soundPlayer)
         {
             if (soundPlayer != null)
             {
@@ -143,7 +143,7 @@ namespace DCSB.Business
                 soundPlayer.Dispose();
             }
 
-            string selectedDeviceName = InstantiateDevice(deviceName, soundPlayer == _primarySoundPlayer, ref soundPlayer);
+            string selectedDeviceName = InstantiateDevice(deviceName, primary, ref soundPlayer);
 
             if (soundPlayer != null)
             {
@@ -156,12 +156,12 @@ namespace DCSB.Business
 
         public string ChangePrimaryOutput(string deviceName)
         {
-            return ChangeDevice(deviceName, _primaryDeviceVolume, ref _primarySoundPlayer);
+            return ChangeDevice(deviceName, _primaryDeviceVolume, true, ref _primarySoundPlayer);
         }
 
         public string ChangeSecondaryOutput(string deviceName)
         {
-            return ChangeDevice(deviceName, _secondaryDeviceVolume, ref _secondarySoundPlayer);
+            return ChangeDevice(deviceName, _secondaryDeviceVolume, false, ref _secondarySoundPlayer);
         }
 
         public ICollection<string> EnumerateDevices()
@@ -174,7 +174,10 @@ namespace DCSB.Business
             IDictionary<int, string> devices = AudioPlaybackEngine.EnumerateDevices();
             KeyValuePair<int, string> device = devices.Where(x => x.Value == name).FirstOrDefault();
 
-            if (primary && device.Equals(default(KeyValuePair<int, string>)) && devices.Count > 2)
+            // fall back to the default output device only when no device was ever chosen
+            // (first run); an explicitly chosen device that is currently missing must not
+            // be silently replaced with the speakers
+            if (primary && string.IsNullOrEmpty(name) && devices.Count > 2)
             {
                 return new KeyValuePair<int, string>(-1, devices[-1]);
             }
