@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using System;
 
 namespace DCSB.SoundPlayer
 {
@@ -22,6 +23,17 @@ namespace DCSB.SoundPlayer
         {
             get { return _reader.Position; }
             set { _reader.Position = value; }
+        }
+
+        public TimeSpan CurrentTime
+        {
+            get { return _reader.CurrentTime; }
+            set { _reader.CurrentTime = value; }
+        }
+
+        public TimeSpan TotalTime
+        {
+            get { return _reader.TotalTime; }
         }
 
         public int Read(float[] buffer, int offset, int count)

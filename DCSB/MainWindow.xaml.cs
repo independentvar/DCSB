@@ -47,10 +47,23 @@ namespace DCSB
 
         protected override void OnStateChanged(EventArgs e)
         {
-            if (DataContext is ViewModel viewModel && viewModel.ConfigurationModel.MinimizeToTray && WindowState == WindowState.Minimized)
-                Hide();
+            if (DataContext is ViewModel viewModel)
+            {
+                if (viewModel.ConfigurationModel.MinimizeToTray && WindowState == WindowState.Minimized)
+                    Hide();
+
+                viewModel.RefreshSeekbarRendering();
+            }
 
             base.OnStateChanged(e);
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            if (DataContext is ViewModel viewModel)
+                viewModel.RefreshSeekbarRendering();
+
+            base.OnActivated(e);
         }
 
         protected override void OnClosed(EventArgs e)

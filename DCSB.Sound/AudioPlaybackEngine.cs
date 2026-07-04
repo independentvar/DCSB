@@ -22,6 +22,47 @@ namespace DCSB.SoundPlayer
 
         private int _volumePowBase = 100;
 
+        // the most recently started sound; the seekbar tracks and seeks this one
+        private volatile SampleReader _currentReader;
+
+        public TimeSpan CurrentTime
+        {
+            get
+            {
+                SampleReader reader = _currentReader;
+                return reader != null ? reader.CurrentTime : TimeSpan.Zero;
+            }
+            set
+            {
+                SampleReader reader = _currentReader;
+                if (reader != null)
+                {
+                    reader.CurrentTime = value;
+                }
+            }
+        }
+
+        public TimeSpan TotalTime
+        {
+            get
+            {
+                SampleReader reader = _currentReader;
+                return reader != null ? reader.TotalTime : TimeSpan.Zero;
+            }
+        }
+
+        // true while the tracked sound is actually progressing (device not paused,
+        // sound not yet finished); the device itself keeps "playing" silence even
+        // with no inputs, hence the reader check
+        public bool IsPlaying
+        {
+            get
+            {
+                SampleReader reader = _currentReader;
+                return reader != null && !reader.IsDisposed && _outputDevice.PlaybackState == PlaybackState.Playing;
+            }
+        }
+
         public float Volume
         {
             get { return RevertVolume(_masterVolume.Volume); }
@@ -74,6 +115,7 @@ namespace DCSB.SoundPlayer
 
             SampleReader reader = new SampleReader(input, loop);
             AddMixerInput(reader, volume);
+            _currentReader = reader;
 
             if (_outputDevice.PlaybackState != PlaybackState.Playing)
             {
@@ -99,6 +141,7 @@ namespace DCSB.SoundPlayer
 
         public void Stop()
         {
+            _currentReader = null;
             _mixer.RemoveAllMixerInputs();
             _outputDevice.Stop();
         }
