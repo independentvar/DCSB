@@ -18,6 +18,8 @@
 
 # install pages
 	!insertmacro MUI_PAGE_WELCOME
+	!insertmacro MUI_PAGE_LICENSE "..\LICENSE"
+	!insertmacro MUI_PAGE_COMPONENTS
 	!insertmacro MUI_PAGE_DIRECTORY
 	!insertmacro MUI_PAGE_INSTFILES
 		# These indented statements modify settings for MUI_PAGE_FINISH
@@ -36,9 +38,11 @@
 # language
 	!insertmacro MUI_LANGUAGE "English"
 
-# start default section
-Section
-    # creating start menu shortcuts for all users
+# main section: the application itself (required, cannot be deselected)
+Section "Deathcounter and Soundboard (required)" SecApp
+    SectionIn RO
+
+    # writing registry and shortcuts for all users
     SetShellVarContext all
 
     # set the installation directory as the destination for the following actions
@@ -68,12 +72,6 @@ Section
     File "..\DCSB\bin\Release\NVorbis.dll"
     File "..\DCSB\bin\Release\Octokit.dll"
     File "..\DCSB\bin\Release\System.Windows.Interactivity.dll"
- 
-    # create a shortcut named "new shortcut" in the start menu programs directory
-    # point the new shortcut at the program uninstaller
-    CreateDirectory "$SMPROGRAMS\Deathcounter and Soundboard"
-    CreateShortCut "$SMPROGRAMS\Deathcounter and Soundboard\uninstall.lnk" "$INSTDIR\uninstall.exe"
-    CreateShortCut "$SMPROGRAMS\Deathcounter and Soundboard\DCSB.lnk" "$INSTDIR\DCSB.exe"
 
     # add application to Add/Remove programs
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DCSB" \
@@ -95,6 +93,29 @@ Section
     WriteRegStr HKLM "Software\DCSB" \
                  "InstallLocation" "$\"$INSTDIR$\""
 SectionEnd
+
+# optional section: start menu shortcuts (selected by default)
+Section "Start Menu shortcuts" SecStartMenu
+    # creating start menu shortcuts for all users
+    SetShellVarContext all
+    CreateDirectory "$SMPROGRAMS\Deathcounter and Soundboard"
+    CreateShortCut "$SMPROGRAMS\Deathcounter and Soundboard\DCSB.lnk" "$INSTDIR\DCSB.exe"
+    CreateShortCut "$SMPROGRAMS\Deathcounter and Soundboard\uninstall.lnk" "$INSTDIR\uninstall.exe"
+SectionEnd
+
+# optional section: desktop shortcut (selected by default)
+Section "Desktop shortcut" SecDesktop
+    # creating the desktop shortcut for all users
+    SetShellVarContext all
+    CreateShortCut "$DESKTOP\Deathcounter and Soundboard.lnk" "$INSTDIR\DCSB.exe"
+SectionEnd
+
+# descriptions shown on the components page
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecApp} "The application and all files required to run it."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Add shortcuts to the Start Menu."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Add a shortcut to the desktop."
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
  
 # uninstaller section start
 Section "uninstall"
@@ -127,6 +148,9 @@ Section "uninstall"
     StrCpy $0 "$INSTDIR"
     Call un.DeleteDirIfEmpty
  
+    # remove the desktop shortcut (if the user created one)
+    Delete "$DESKTOP\Deathcounter and Soundboard.lnk"
+
     # remove the link from the start menu
     Delete "$SMPROGRAMS\Deathcounter and Soundboard\uninstall.lnk"
     Delete "$SMPROGRAMS\Deathcounter and Soundboard\DCSB.lnk"
