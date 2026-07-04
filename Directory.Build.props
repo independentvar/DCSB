@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- All projects target a single framework (net481). Keep the pre-SDK output
+         layout (bin\<Config>\ with no TFM subfolder) so the NSIS installer and the
+         CI workflow can reference bin\Release\ paths unchanged. -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+</Project>
