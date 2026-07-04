@@ -5,7 +5,7 @@ using System.Timers;
 
 namespace DCSB.Input
 {
-    public class KeyboardInput
+    public class KeyboardInput : IDisposable
     {
         public delegate void KeyboardHookCallback(VKey key, List<VKey> pressedKeys);
 
@@ -108,6 +108,14 @@ namespace DCSB.Input
             {
                 pressedKeys.Remove(key);
             }
+        }
+
+        public void Dispose()
+        {
+            shiftNumpadTimer.Stop();
+            shiftNumpadTimer.Dispose();
+            mouseInput.Dispose();
+            rawInput.Dispose();
         }
     }
 }

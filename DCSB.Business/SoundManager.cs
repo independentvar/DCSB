@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace DCSB.Business
 {
-    public class SoundManager
+    public class SoundManager : IDisposable
     {
         private AudioPlaybackEngine _primarySoundPlayer;
         private AudioPlaybackEngine _secondarySoundPlayer;
@@ -216,6 +216,24 @@ namespace DCSB.Business
         public ICollection<string> EnumerateDevices()
         {
             return AudioPlaybackEngine.EnumerateDevices();
+        }
+
+        // Disposing the WASAPI engines stops their playback threads. NAudio's WasapiOut
+        // render thread is a foreground thread, so leaving the engines alive keeps the
+        // whole process running after the window closes.
+        public void Dispose()
+        {
+            if (_primarySoundPlayer != null)
+            {
+                _primarySoundPlayer.Dispose();
+                _primarySoundPlayer = null;
+            }
+            if (_secondarySoundPlayer != null)
+            {
+                _secondarySoundPlayer.Dispose();
+                _secondarySoundPlayer = null;
+            }
+            GC.SuppressFinalize(this);
         }
 
         ~SoundManager()

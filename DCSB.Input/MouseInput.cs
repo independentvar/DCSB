@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace DCSB.Input
 {
-    public class MouseInput
+    public class MouseInput : IDisposable
     {
         public delegate void MouseButtonCallback(VKey button);
 
@@ -38,6 +38,8 @@ namespace DCSB.Input
         // Buttons whose down event was swallowed because it landed on the excluded window;
         // their matching up event has to be swallowed as well.
         private readonly HashSet<VKey> _suppressedButtons = new HashSet<VKey>();
+
+        private bool _disposed;
 
         public MouseInput()
         {
@@ -111,12 +113,25 @@ namespace DCSB.Input
             return window != IntPtr.Zero && (window == excluded || GetAncestor(window, GA_ROOT) == excluded);
         }
 
-        ~MouseInput()
+        public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed) return;
             if (_hookHandle != IntPtr.Zero)
             {
                 UnhookWindowsHookEx(_hookHandle);
             }
+            _disposed = true;
+        }
+
+        ~MouseInput()
+        {
+            Dispose(false);
         }
 
         [StructLayout(LayoutKind.Sequential)]
