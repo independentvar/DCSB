@@ -52,9 +52,9 @@ Section "Deathcounter and Soundboard (required)" SecApp
     WriteUninstaller "uninstall.exe"
 
     # install app files
-    File "..\DCSB\bin\Release\GalaSoft.MvvmLight.dll"
-    File "..\DCSB\bin\Release\GalaSoft.MvvmLight.Extras.dll"
-    File "..\DCSB\bin\Release\GalaSoft.MvvmLight.Platform.dll"
+    File "..\DCSB\bin\Release\CommunityToolkit.Mvvm.dll"
+    File "..\DCSB\bin\Release\Microsoft.Bcl.AsyncInterfaces.dll"
+    File "..\DCSB\bin\Release\Microsoft.Xaml.Behaviors.dll"
     File "..\DCSB\bin\Release\DCSB.exe"
     File "..\DCSB\bin\Release\DCSB.Business.dll"
     File "..\DCSB\bin\Release\DCSB.Controls.dll"
@@ -71,7 +71,12 @@ Section "Deathcounter and Soundboard (required)" SecApp
     File "..\DCSB\bin\Release\NAudio.Vorbis.dll"
     File "..\DCSB\bin\Release\NVorbis.dll"
     File "..\DCSB\bin\Release\Octokit.dll"
-    File "..\DCSB\bin\Release\System.Windows.Interactivity.dll"
+    File "..\DCSB\bin\Release\System.Buffers.dll"
+    File "..\DCSB\bin\Release\System.ComponentModel.Annotations.dll"
+    File "..\DCSB\bin\Release\System.Memory.dll"
+    File "..\DCSB\bin\Release\System.Numerics.Vectors.dll"
+    File "..\DCSB\bin\Release\System.Runtime.CompilerServices.Unsafe.dll"
+    File "..\DCSB\bin\Release\System.Threading.Tasks.Extensions.dll"
 
     # add application to Add/Remove programs
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DCSB" \
@@ -125,9 +130,9 @@ Section "uninstall"
 
     # delete the uninstaller and app files
     Delete "$INSTDIR\uninstall.exe"
-	Delete "$INSTDIR\GalaSoft.MvvmLight.dll"
-    Delete "$INSTDIR\GalaSoft.MvvmLight.Extras.dll"
-    Delete "$INSTDIR\GalaSoft.MvvmLight.Platform.dll"
+	Delete "$INSTDIR\CommunityToolkit.Mvvm.dll"
+    Delete "$INSTDIR\Microsoft.Bcl.AsyncInterfaces.dll"
+    Delete "$INSTDIR\Microsoft.Xaml.Behaviors.dll"
     Delete "$INSTDIR\DCSB.exe"
     Delete "$INSTDIR\DCSB.Business.dll"
     Delete "$INSTDIR\DCSB.Controls.dll"
@@ -144,7 +149,12 @@ Section "uninstall"
     Delete "$INSTDIR\NAudio.Vorbis.dll"
     Delete "$INSTDIR\NVorbis.dll"
     Delete "$INSTDIR\Octokit.dll"
-    Delete "$INSTDIR\System.Windows.Interactivity.dll"
+    Delete "$INSTDIR\System.Buffers.dll"
+    Delete "$INSTDIR\System.ComponentModel.Annotations.dll"
+    Delete "$INSTDIR\System.Memory.dll"
+    Delete "$INSTDIR\System.Numerics.Vectors.dll"
+    Delete "$INSTDIR\System.Runtime.CompilerServices.Unsafe.dll"
+    Delete "$INSTDIR\System.Threading.Tasks.Extensions.dll"
     StrCpy $0 "$INSTDIR"
     Call un.DeleteDirIfEmpty
  

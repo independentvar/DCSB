@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Xml.Serialization;
 
 namespace DCSB.Models
@@ -13,7 +13,7 @@ namespace DCSB.Models
             set
             {
                 _number = value;
-                RaisePropertyChanged("Number");
+                OnPropertyChanged("Number");
             }
         }
 
@@ -24,7 +24,7 @@ namespace DCSB.Models
             set
             {
                 _name = value;
-                RaisePropertyChanged("Name");
+                OnPropertyChanged("Name");
             }
         }
 

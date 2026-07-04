@@ -1,9 +1,9 @@
-using DCSB.Utils;
+﻿using DCSB.Utils;
 using System.Collections.ObjectModel;
 using System.Xml.Serialization;
 using System.IO;
 using System.Collections.Generic;
-using GalaSoft.MvvmLight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace DCSB.Models
@@ -17,7 +17,7 @@ namespace DCSB.Models
             set
             {
                 _name = value;
-                RaisePropertyChanged("Name");
+                OnPropertyChanged("Name");
             }
         }
 
@@ -28,7 +28,7 @@ namespace DCSB.Models
             set
             {
                 _files = value;
-                RaisePropertyChanged("Files");
+                OnPropertyChanged("Files");
             }
         }
 
@@ -39,7 +39,7 @@ namespace DCSB.Models
             set
             {
                 _keys = value;
-                RaisePropertyChanged("Keys");
+                OnPropertyChanged("Keys");
             }
         }
 
@@ -50,7 +50,7 @@ namespace DCSB.Models
             set
             {
                 _volume = value;
-                RaisePropertyChanged("Volume");
+                OnPropertyChanged("Volume");
             }
         }
 
@@ -61,7 +61,7 @@ namespace DCSB.Models
             set
             {
                 _loop = value;
-                RaisePropertyChanged("Loop");
+                OnPropertyChanged("Loop");
             }
         }
 
@@ -73,7 +73,7 @@ namespace DCSB.Models
             set
             {
                 _error = value;
-                RaisePropertyChanged("Error");
+                OnPropertyChanged("Error");
             }
         }
 
@@ -82,8 +82,8 @@ namespace DCSB.Models
             _keys = new ObservableCollection<VKey>();
             _files = new ObservableCollection<string>();
 
-            _keys.CollectionChanged += (sender, e) => RaisePropertyChanged("Keys");
-            _files.CollectionChanged += (sender, e) => RaisePropertyChanged("Files");
+            _keys.CollectionChanged += (sender, e) => OnPropertyChanged("Keys");
+            _files.CollectionChanged += (sender, e) => OnPropertyChanged("Files");
             _files.CollectionChanged += (sender, e) => ValidateFiles();
 
             Volume = 100;

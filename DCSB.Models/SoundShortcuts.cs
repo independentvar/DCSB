@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DCSB.Models
 {
@@ -11,7 +11,7 @@ namespace DCSB.Models
             set
             {
                 _pause = value;
-                RaisePropertyChanged("Pause");
+                OnPropertyChanged("Pause");
             }
         }
 
@@ -22,7 +22,7 @@ namespace DCSB.Models
             set
             {
                 _continue = value;
-                RaisePropertyChanged("Continue");
+                OnPropertyChanged("Continue");
             }
         }
 
@@ -33,7 +33,7 @@ namespace DCSB.Models
             set
             {
                 _stop = value;
-                RaisePropertyChanged("Stop");
+                OnPropertyChanged("Stop");
             }
         }
 
@@ -43,9 +43,9 @@ namespace DCSB.Models
             _continue = new Shortcut();
             _stop = new Shortcut();
 
-            _pause.PropertyChanged += (sender, e) => RaisePropertyChanged("Pause");
-            _continue.PropertyChanged += (sender, e) => RaisePropertyChanged("Continue");
-            _stop.PropertyChanged += (sender, e) => RaisePropertyChanged("Stop");
+            _pause.PropertyChanged += (sender, e) => OnPropertyChanged("Pause");
+            _continue.PropertyChanged += (sender, e) => OnPropertyChanged("Continue");
+            _stop.PropertyChanged += (sender, e) => OnPropertyChanged("Stop");
         }
     }
 }

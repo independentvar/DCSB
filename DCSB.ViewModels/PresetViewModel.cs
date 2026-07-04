@@ -1,6 +1,5 @@
 ﻿using DCSB.Models;
-using GalaSoft.MvvmLight;
-using GalaSoft.MvvmLight.Command;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -37,7 +36,7 @@ namespace DCSB.ViewModels
             set
             {
                 _selectedPreset = value;
-                RaisePropertyChanged("SelectedPreset");
+                OnPropertyChanged("SelectedPreset");
             }
         }
 
@@ -48,7 +47,7 @@ namespace DCSB.ViewModels
             set
             {
                 _selectedCounters = value;
-                RaisePropertyChanged("SelectedCounters");
+                OnPropertyChanged("SelectedCounters");
             }
         }
 
@@ -59,7 +58,7 @@ namespace DCSB.ViewModels
             set
             {
                 _selectedSounds = value;
-                RaisePropertyChanged("SelectedSounds");
+                OnPropertyChanged("SelectedSounds");
             }
         }
 

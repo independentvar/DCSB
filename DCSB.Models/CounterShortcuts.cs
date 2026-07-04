@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using DCSB.Utils;
 
 namespace DCSB.Models
@@ -12,7 +12,7 @@ namespace DCSB.Models
             set
             {
                 _next = value;
-                RaisePropertyChanged("Next");
+                OnPropertyChanged("Next");
             }
         }
 
@@ -23,7 +23,7 @@ namespace DCSB.Models
             set
             {
                 _previous = value;
-                RaisePropertyChanged("Previous");
+                OnPropertyChanged("Previous");
             }
         }
 
@@ -34,7 +34,7 @@ namespace DCSB.Models
             set
             {
                 _increment = value;
-                RaisePropertyChanged("Increment");
+                OnPropertyChanged("Increment");
             }
         }
 
@@ -45,7 +45,7 @@ namespace DCSB.Models
             set
             {
                 _decrement = value;
-                RaisePropertyChanged("Decrement");
+                OnPropertyChanged("Decrement");
             }
         }
 
@@ -56,7 +56,7 @@ namespace DCSB.Models
             set
             {
                 _reset = value;
-                RaisePropertyChanged("Reset");
+                OnPropertyChanged("Reset");
             }
         }
 
@@ -68,11 +68,11 @@ namespace DCSB.Models
             _decrement = new Shortcut();
             _reset = new Shortcut();
 
-            _next.PropertyChanged += (sender, e) => RaisePropertyChanged("Next");
-            _previous.PropertyChanged += (sender, e) => RaisePropertyChanged("Previous");
-            _increment.PropertyChanged += (sender, e) => RaisePropertyChanged("Increment");
-            _decrement.PropertyChanged += (sender, e) => RaisePropertyChanged("Decrement");
-            _reset.PropertyChanged += (sender, e) => RaisePropertyChanged("Reset");
+            _next.PropertyChanged += (sender, e) => OnPropertyChanged("Next");
+            _previous.PropertyChanged += (sender, e) => OnPropertyChanged("Previous");
+            _increment.PropertyChanged += (sender, e) => OnPropertyChanged("Increment");
+            _decrement.PropertyChanged += (sender, e) => OnPropertyChanged("Decrement");
+            _reset.PropertyChanged += (sender, e) => OnPropertyChanged("Reset");
 
             _next.Keys.Add(VKey.MULTIPLY);
             _increment.Keys.Add(VKey.ADD);

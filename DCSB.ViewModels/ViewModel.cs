@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
-using GalaSoft.MvvmLight;
-using GalaSoft.MvvmLight.CommandWpf;
+using CommunityToolkit.Mvvm.ComponentModel;
 using DCSB.Business;
 using DCSB.Input;
 using DCSB.Models;
@@ -101,7 +100,7 @@ namespace DCSB.ViewModels
                     _soundManager.CurrentSoundPosition = TimeSpan.FromSeconds(value);
                     _lastRawPositionSeconds = value;
                     _positionInterpolation.Restart();
-                    RaisePropertyChanged(nameof(SoundPositionSeconds));
+                    OnPropertyChanged(nameof(SoundPositionSeconds));
                 }
             }
         }
@@ -202,12 +201,12 @@ namespace DCSB.ViewModels
             if (Math.Abs(length - _soundLengthSeconds) > 0.001)
             {
                 _soundLengthSeconds = length;
-                RaisePropertyChanged(nameof(SoundLengthSeconds));
+                OnPropertyChanged(nameof(SoundLengthSeconds));
             }
             if (Math.Abs(position - _soundPositionSeconds) > 0.001)
             {
                 _soundPositionSeconds = position;
-                RaisePropertyChanged(nameof(SoundPositionSeconds));
+                OnPropertyChanged(nameof(SoundPositionSeconds));
             }
         }
 
@@ -244,7 +243,7 @@ namespace DCSB.ViewModels
             set
             {
                 _configurationModel.CountersWidth = value.Value;
-                RaisePropertyChanged("CountersWidth");
+                OnPropertyChanged("CountersWidth");
             }
         }
 
@@ -254,7 +253,7 @@ namespace DCSB.ViewModels
             set
             {
                 _configurationModel.SoundsWidth = value.Value;
-                RaisePropertyChanged("SoundsWidth");
+                OnPropertyChanged("SoundsWidth");
             }
         }
 
@@ -270,7 +269,7 @@ namespace DCSB.ViewModels
             {
                 _configurationModel.Volume = (int)value;
                 _soundManager.Volume = _configurationModel.Volume / 100f;
-                RaisePropertyChanged("CurrentVolume");
+                OnPropertyChanged("CurrentVolume");
             }
         }
 
@@ -281,7 +280,7 @@ namespace DCSB.ViewModels
             {
                 _configurationModel.PrimaryDeviceVolume = (int)value;
                 _soundManager.PrimaryDeviceVolume = _configurationModel.PrimaryDeviceVolume / 100f;
-                RaisePropertyChanged("PrimaryDeviceVolume");
+                OnPropertyChanged("PrimaryDeviceVolume");
             }
         }
 
@@ -292,7 +291,7 @@ namespace DCSB.ViewModels
             {
                 _configurationModel.SecondaryDeviceVolume = (int)value;
                 _soundManager.SecondaryDeviceVolume = _configurationModel.SecondaryDeviceVolume / 100f;
-                RaisePropertyChanged("SecondaryDeviceVolume");
+                OnPropertyChanged("SecondaryDeviceVolume");
             }
         }
 
@@ -303,7 +302,7 @@ namespace DCSB.ViewModels
             {
                 _configurationModel.Overlap = value;
                 _soundManager.Overlap = _configurationModel.Overlap;
-                RaisePropertyChanged("Overlap");
+                OnPropertyChanged("Overlap");
             }
         }
 
@@ -313,7 +312,7 @@ namespace DCSB.ViewModels
             set
             {
                 _configurationModel.Enable = value;
-                RaisePropertyChanged("Enable");
+                OnPropertyChanged("Enable");
                 if (_configurationModel.Enable != DisplayOption.Sounds && _configurationModel.Enable != DisplayOption.Both)
                 {
                     _soundManager.Stop();
@@ -336,7 +335,7 @@ namespace DCSB.ViewModels
             {
                 string selectedDeviceName = _soundManager.ChangePrimaryOutput(value);
                 _configurationModel.PrimaryOutput = selectedDeviceName;
-                RaisePropertyChanged("PrimaryOutput");
+                OnPropertyChanged("PrimaryOutput");
             }
         }
 
@@ -350,7 +349,7 @@ namespace DCSB.ViewModels
             {
                 string selectedDeviceName = _soundManager.ChangeSecondaryOutput(value);
                 _configurationModel.SecondaryOutput = selectedDeviceName;
-                RaisePropertyChanged("SecondaryOutput");
+                OnPropertyChanged("SecondaryOutput");
             }
         }
 

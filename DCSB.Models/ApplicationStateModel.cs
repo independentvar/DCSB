@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DCSB.Models
 {
@@ -11,7 +11,7 @@ namespace DCSB.Models
             set
             {
                 _settingsOpened = value;
-                RaisePropertyChanged("SettingsOpened");
+                OnPropertyChanged("SettingsOpened");
             }
         }
 
@@ -22,7 +22,7 @@ namespace DCSB.Models
             set
             {
                 _soundOpened = value;
-                RaisePropertyChanged("SoundOpened");
+                OnPropertyChanged("SoundOpened");
             }
         }
 
@@ -33,7 +33,7 @@ namespace DCSB.Models
             set
             {
                 _counterOpened = value;
-                RaisePropertyChanged("CounterOpened");
+                OnPropertyChanged("CounterOpened");
             }
         }
 
@@ -44,7 +44,7 @@ namespace DCSB.Models
             set
             {
                 _bindKeysOpened = value;
-                RaisePropertyChanged("BindKeysOpened");
+                OnPropertyChanged("BindKeysOpened");
             }
         }
 
@@ -55,7 +55,7 @@ namespace DCSB.Models
             set
             {
                 _aboutOpened = value;
-                RaisePropertyChanged("AboutOpened");
+                OnPropertyChanged("AboutOpened");
             }
         }
 
@@ -66,7 +66,7 @@ namespace DCSB.Models
             set
             {
                 _modifiedBindable = value;
-                RaisePropertyChanged("ModifiedBindable");
+                OnPropertyChanged("ModifiedBindable");
             }
         }
 
@@ -77,7 +77,7 @@ namespace DCSB.Models
             set
             {
                 _modifiedCounter = value;
-                RaisePropertyChanged("ModifiedCounter");
+                OnPropertyChanged("ModifiedCounter");
             }
         }
 
@@ -88,7 +88,7 @@ namespace DCSB.Models
             set
             {
                 _modifiedSound = value;
-                RaisePropertyChanged("ModifiedSound");
+                OnPropertyChanged("ModifiedSound");
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using DCSB.Utils;
 using System.Xml.Serialization;
 
@@ -13,7 +13,7 @@ namespace DCSB.Models
             set
             {
                 _volume = value;
-                RaisePropertyChanged("Volume");
+                OnPropertyChanged("Volume");
             }
         }
 
@@ -24,7 +24,7 @@ namespace DCSB.Models
             set
             {
                 _primaryDeviceVolume = value;
-                RaisePropertyChanged("PrimaryDeviceVolume");
+                OnPropertyChanged("PrimaryDeviceVolume");
             }
         }
 
@@ -35,7 +35,7 @@ namespace DCSB.Models
             set
             {
                 _secondaryDeviceVolume = value;
-                RaisePropertyChanged("SecondaryDeviceVolume");
+                OnPropertyChanged("SecondaryDeviceVolume");
             }
         }
 
@@ -46,7 +46,7 @@ namespace DCSB.Models
             set
             {
                 _overlap = value;
-                RaisePropertyChanged("Overlap");
+                OnPropertyChanged("Overlap");
             }
         }
 
@@ -57,7 +57,7 @@ namespace DCSB.Models
             set
             {
                 _primaryOutput = value;
-                RaisePropertyChanged("PrimaryOutput");
+                OnPropertyChanged("PrimaryOutput");
             }
         }
 
@@ -68,7 +68,7 @@ namespace DCSB.Models
             set
             {
                 _secondaryOutput = value;
-                RaisePropertyChanged("SecondaryOutput");
+                OnPropertyChanged("SecondaryOutput");
             }
         }
 
@@ -79,7 +79,7 @@ namespace DCSB.Models
             set
             {
                 _windowWidth = value;
-                RaisePropertyChanged("WindowWidth");
+                OnPropertyChanged("WindowWidth");
             }
         }
 
@@ -90,7 +90,7 @@ namespace DCSB.Models
             set
             {
                 _windowHeight = value;
-                RaisePropertyChanged("WindowHeight");
+                OnPropertyChanged("WindowHeight");
             }
         }
 
@@ -101,7 +101,7 @@ namespace DCSB.Models
             set
             {
                 _countersWidth = value;
-                RaisePropertyChanged("CountersWidth");
+                OnPropertyChanged("CountersWidth");
             }
         }
 
@@ -112,7 +112,7 @@ namespace DCSB.Models
             set
             {
                 _soundsWidth = value;
-                RaisePropertyChanged("SoundsWidth");
+                OnPropertyChanged("SoundsWidth");
             }
         }
 
@@ -123,7 +123,7 @@ namespace DCSB.Models
             set
             {
                 _minimizeToTray = value;
-                RaisePropertyChanged("MinimizeToTray");
+                OnPropertyChanged("MinimizeToTray");
             }
         }
 
@@ -134,7 +134,7 @@ namespace DCSB.Models
             set
             {
                 _enable = value;
-                RaisePropertyChanged("Enable");
+                OnPropertyChanged("Enable");
             }
         }
 
@@ -145,7 +145,7 @@ namespace DCSB.Models
             set
             {
                 _presetCollection = value;
-                RaisePropertyChanged("PresetCollection");
+                OnPropertyChanged("PresetCollection");
             }
         }
 
@@ -156,7 +156,7 @@ namespace DCSB.Models
             set
             {
                 _selectedPresetIndex = value;
-                RaisePropertyChanged("SelectedPreset");
+                OnPropertyChanged("SelectedPreset");
             }
         }
 
@@ -178,7 +178,7 @@ namespace DCSB.Models
             set
             {
                 _counterShortcuts = value;
-                RaisePropertyChanged("CounterShortcuts");
+                OnPropertyChanged("CounterShortcuts");
             }
         }
 
@@ -189,7 +189,7 @@ namespace DCSB.Models
             set
             {
                 _soundShortcuts = value;
-                RaisePropertyChanged("SoundShortcuts");
+                OnPropertyChanged("SoundShortcuts");
             }
         }
 
@@ -199,10 +199,10 @@ namespace DCSB.Models
             CounterShortcuts = new CounterShortcuts();
             SoundShortcuts = new SoundShortcuts();
 
-            PresetCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("PresetCollection");
-            PresetCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("SelectedPreset");
-            CounterShortcuts.PropertyChanged += (sender, e) => RaisePropertyChanged("CounterShortcuts");
-            SoundShortcuts.PropertyChanged += (sender, e) => RaisePropertyChanged("SoundShortcuts");
+            PresetCollection.CollectionChanged += (sender, e) => OnPropertyChanged("PresetCollection");
+            PresetCollection.CollectionChanged += (sender, e) => OnPropertyChanged("SelectedPreset");
+            CounterShortcuts.PropertyChanged += (sender, e) => OnPropertyChanged("CounterShortcuts");
+            SoundShortcuts.PropertyChanged += (sender, e) => OnPropertyChanged("SoundShortcuts");
 
             Volume = 100;
             PrimaryDeviceVolume = 100;
