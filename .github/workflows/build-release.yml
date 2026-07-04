@@ -32,7 +32,7 @@ jobs:
         uses: microsoft/setup-msbuild@v3
 
       - name: Restore NuGet packages
-        run: nuget restore DCSB.sln
+        run: msbuild DCSB.sln -t:restore
 
       # The projects target .NET Framework 4.8.1, whose targeting pack is not
       # installed on GitHub runners. Install the reference assemblies from NuGet
@@ -56,7 +56,7 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vstest = & $vswhere -latest -products * -find 'Common7\IDE\Extensions\TestPlatform\vstest.console.exe' | Select-Object -First 1
           if (-not $vstest) { throw "vstest.console.exe not found" }
-          & $vstest "DCSB.Tests\bin\Release\DCSB.Tests.dll" /TestAdapterPath:"packages\MSTest.TestAdapter.2.2.10\build\_common" /logger:trx
+          & $vstest "DCSB.Tests\bin\Release\DCSB.Tests.dll" /TestAdapterPath:"DCSB.Tests\bin\Release" /logger:trx
           exit $LASTEXITCODE
 
       - name: Read version from built executable
@@ -66,13 +66,6 @@ jobs:
           $version = (Get-Item "DCSB\bin\Release\DCSB.exe").VersionInfo.FileVersion
           "version=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $version"
-
-      # NAudio.Vorbis.dll was compiled against NVorbis 0.8.4.0 but the package
-      # ships 0.8.5.0, so MSBuild does not copy NVorbis.dll transitively into
-      # the app output. Copy it explicitly so the installer can pick it up.
-      - name: Copy NVorbis.dll to build output
-        shell: pwsh
-        run: Copy-Item packages\NVorbis.*\lib\NVorbis.dll DCSB\bin\Release\ -Force
 
       - name: Install NSIS
         run: choco install nsis -y --no-progress

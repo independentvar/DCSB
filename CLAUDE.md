@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Deathcounter and Soundboard (DCSB) — a .NET Framework 4.8.1 WPF app using MVVM Light. Old-style csproj files with packages.config NuGet (packages restore to the repo-root `packages\` folder via HintPath; run `nuget restore DCSB.sln` before building a fresh clone). `DCSB\DCSB.csproj` is the entry exe; the other projects are layers (Models / ViewModels / Views / Business / Input / Sound / Utils / etc.). MSTest tests live in `DCSB.Tests` (covering ConfigurationManager, config serialization, and UpdateManager version parsing).
+Deathcounter and Soundboard (DCSB) — a .NET Framework 4.8.1 WPF app using CommunityToolkit.Mvvm. SDK-style csproj files (`<Project Sdk="Microsoft.NET.Sdk">`) with `PackageReference` NuGet — no `packages.config`, no `packages\` folder; packages restore to the global NuGet cache. Restore happens automatically on `dotnet build`; with VS/`msbuild` run `msbuild DCSB.sln -t:restore` first (or add `-restore`). A repo-root `Directory.Build.props` sets `AppendTargetFrameworkToOutputPath=false` so every project still outputs to `bin\<Config>\` (no `net481\` subfolder), keeping the installer and CI paths stable. `DCSB\DCSB.csproj` is the entry exe; the other projects are layers (Models / ViewModels / Views / Business / Input / Sound / Utils / etc.). MSTest tests live in `DCSB.Tests` (covering ConfigurationManager, config serialization, and UpdateManager version parsing).
 
 ## Build and release
 
-- Build: `msbuild DCSB.sln /p:Configuration=Release` (requires the .NET Framework 4.8.1 targeting pack; CI installs it from the `Microsoft.NETFramework.ReferenceAssemblies.net481` NuGet package — see `.github/workflows/build-release.yml`).
-- Tests: run with `vstest.console.exe DCSB.Tests\bin\Release\DCSB.Tests.dll /TestAdapterPath:packages\MSTest.TestAdapter.2.2.10\build\_common` (CI locates vstest via vswhere; if VS isn't installed locally, extract the `Microsoft.TestPlatform` NuGet package and use its `tools\net462\...\vstest.console.exe`). CI runs tests on every build.
+- Build: `dotnet build DCSB.sln -c Release` (restores automatically), or `msbuild DCSB.sln -t:restore,build /p:Configuration=Release`. Building net481 requires the .NET Framework 4.8.1 targeting pack; CI installs it from the `Microsoft.NETFramework.ReferenceAssemblies.net481` NuGet package — see `.github/workflows/build-release.yml`.
+- Tests: `dotnet test DCSB.Tests\DCSB.Tests.csproj -c Release`, or via vstest: `vstest.console.exe DCSB.Tests\bin\Release\DCSB.Tests.dll /TestAdapterPath:DCSB.Tests\bin\Release` (the MSTest adapter DLLs are copied next to the test assembly by `PackageReference`). CI locates vstest via vswhere and runs tests on every build.
 - UI/integration tests: `DCSB.UITests\Run-UITests.ps1` drives the built Release exe via UI Automation and meters real audio output on the endpoints. Manual only — needs an interactive desktop session and audio devices; not part of the sln, never run in CI. See `DCSB.UITests\README.md`.
 - CI builds every push and PR. PRs into `master` require the `build` check (branch protection). PR runs for same-repo branches are deduplicated: the pull_request-event job is skipped and the push-event run provides the real result.
 - **Releasing is automatic**: merging to `master` builds the NSIS installer and publishes a GitHub release tagged `v<version>` from `AssemblyVersionInfo.cs`. Pushing the same version twice updates the existing release instead of creating a new one — bump the version to get a new release.
@@ -18,9 +18,9 @@ Deathcounter and Soundboard (DCSB) — a .NET Framework 4.8.1 WPF app using MVVM
 
 ## Gotchas
 
-- **Adding/removing a DLL dependency requires editing `Installer scripts\CreateInstaller.nsi`** — the installer (and its uninstall section) lists every shipped file explicitly. CI copies `NVorbis.dll` into the output manually (workflow step) because MSBuild won't copy it transitively.
+- **Adding/removing a DLL dependency requires editing `Installer scripts\CreateInstaller.nsi`** — the installer (and its uninstall section) lists every shipped file explicitly. After the SDK-style migration, `PackageReference` copies all transitive dependencies (including `NVorbis.dll`) into the app output, so no manual copy step is needed; verify the DLL set in `DCSB\bin\Release\` still matches the installer's `File`/`Delete` lists.
 - Folder `DCSB.Sound\` builds project `DCSB.SoundPlayer.csproj` → `DCSB.SoundPlayer.dll` (folder and assembly names differ).
-- `DCSB.csproj` contains stale ClickOnce properties (PublishUrl, kalejin.eu UpdateUrl, etc.) — legacy, unrelated to the NSIS installer; ignore them.
+- Each project keeps its hand-written `Properties\AssemblyInfo.cs`; the SDK csproj sets `GenerateAssemblyInfo=false` to avoid duplicate-attribute clashes with those files and the link-included `AssemblyVersionInfo.cs`.
 - User config is stored machine-wide at `%ProgramData%\DCSB\config.xml`. Saves are debounced 1s via a timer in `DCSB.Business\ConfigurationManager.cs`; `Dispose()` flushes the pending save.
 - The update checker (`DCSB.Business\UpdateManager.cs`) reads this fork's GitHub releases and parses the version from the tag name — tags must contain `x.y.z.w`. TLS 1.2 is enabled explicitly there (harmless leftover from the .NET 4.5.2 days; .NET 4.8.1 enables it by default).
 - `DCSB.Input` uses Win32 Raw Input P/Invoke for global hotkeys — sensitive to window-handle lifecycle.
