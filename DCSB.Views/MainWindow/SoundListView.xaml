@@ -97,9 +97,11 @@
             <StackPanel />
         </DockPanel>
 
-        <DataGrid ItemsSource="{Binding ConfigurationModel.SelectedPreset.SoundCollection}" 
+        <Grid>
+        <DataGrid ItemsSource="{Binding ConfigurationModel.SelectedPreset.SoundCollection}"
                   SelectedItem="{Binding ConfigurationModel.SelectedPreset.SelectedSound, Mode=TwoWay}"
                   Interactivity:Commands.DoubleClickCommand="{Binding PlayCommand}"
+                  Interactivity:Commands.FileDropCommand="{Binding DropSoundFilesCommand}"
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="False"
                   SelectionMode="Single"
@@ -161,5 +163,26 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+
+        <TextBlock Text="Drop sound files here or click + to add"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Margin="10"
+                   Foreground="Gray"
+                   IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ConfigurationModel.SelectedPreset.SoundCollection.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+        </Grid>
     </DockPanel>
 </UserControl>
