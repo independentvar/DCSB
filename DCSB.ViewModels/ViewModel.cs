@@ -345,6 +345,24 @@ namespace DCSB.ViewModels
             _applicationStateModel.CounterOpened = true;
         }
 
+        public ICommand DropCounterFilesCommand
+        {
+            get { return new RelayCommand<string[]>(DropCounterFiles, files => AreCountersEnabled()); }
+        }
+        private void DropCounterFiles(string[] files)
+        {
+            foreach (string file in files)
+            {
+                if (Path.GetExtension(file).ToLowerInvariant() != ".txt")
+                {
+                    continue;
+                }
+                Counter counter = new Counter() { Name = Path.GetFileNameWithoutExtension(file), File = file };
+                _configurationModel.SelectedPreset.CounterCollection.Add(counter);
+                _configurationModel.SelectedPreset.SelectedCounter = counter;
+            }
+        }
+
         public ICommand RemoveCounterCommand
         {
             get { return new RelayCommand(RemoveCounter, AreCountersEnabled); }

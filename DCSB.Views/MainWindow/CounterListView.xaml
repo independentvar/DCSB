@@ -57,8 +57,10 @@
                                  ToolTip="Decrement" />
         </DockPanel>
 
-        <DataGrid ItemsSource="{Binding ConfigurationModel.SelectedPreset.CounterCollection}" 
+        <Grid>
+        <DataGrid ItemsSource="{Binding ConfigurationModel.SelectedPreset.CounterCollection}"
                   SelectedItem="{Binding ConfigurationModel.SelectedPreset.SelectedCounter, Mode=TwoWay}"
+                  Interactivity:Commands.FileDropCommand="{Binding DropCounterFilesCommand}"
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="False"
                   SelectionMode="Single"
@@ -120,5 +122,26 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+
+        <TextBlock Text="Drop counter files (.txt) here or click + to add"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Margin="10"
+                   Foreground="Gray"
+                   IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ConfigurationModel.SelectedPreset.CounterCollection.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+        </Grid>
     </DockPanel>
 </UserControl>
