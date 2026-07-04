@@ -13,6 +13,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Security.Principal;
 using System.Diagnostics;
+using System.Windows.Threading;
 
 namespace DCSB.ViewModels
 {
@@ -33,6 +34,19 @@ namespace DCSB.ViewModels
         private double _previousVolume;
         private double _previousPrimaryVolume;
         private double _previousSecondaryVolume;
+
+        private double _soundPositionSeconds;
+        private double _soundLengthSeconds;
+
+        // the reader position only advances in whole audio-buffer chunks (~100 ms),
+        // so the displayed position is interpolated with a wall clock between real
+        // readings to make the seekbar move smoothly
+        private double _lastRawPositionSeconds;
+        private bool _wasPlaying;
+        private bool _seekbarRenderingAttached;
+        private IntPtr _windowHandle;
+        private DispatcherTimer _seekbarWatchdog;
+        private readonly Stopwatch _positionInterpolation = new Stopwatch();
 
         public ViewModel()
         {
@@ -58,13 +72,150 @@ namespace DCSB.ViewModels
             _configurationModel.SoundShortcuts.Continue.Command = ContinueCommand;
             _configurationModel.SoundShortcuts.Stop.Command = StopCommand;
 
+            // the seekbar updates once per rendered frame, but only while a sound is
+            // playing and the window can actually be seen (not minimized, not hidden
+            // to tray, not covered by a fullscreen game on the same monitor) - a
+            // permanent CompositionTarget.Rendering subscription would keep WPF
+            // compositing continuously even when the app idles behind a game
+            _soundManager.PlaybackStarted += (sender, e) => RefreshSeekbarRendering();
+
+            // while a sound plays covered/minimized, no window event fires when the
+            // cover goes away (e.g. the game closes); retry once a second until the
+            // seekbar is visible again or playback ends
+            _seekbarWatchdog = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _seekbarWatchdog.Tick += (sender, e) => RefreshSeekbarRendering();
+
             Task.Run(() => _updateManager.AutoUpdateCheck(Version));
+        }
+
+        public double SoundPositionSeconds
+        {
+            get { return _soundPositionSeconds; }
+            set
+            {
+                // only a user-initiated change (drag/click on the seekbar) arrives here
+                // with a different value; the timer writes the backing field directly
+                if (Math.Abs(value - _soundPositionSeconds) > 0.001)
+                {
+                    _soundPositionSeconds = value;
+                    _soundManager.CurrentSoundPosition = TimeSpan.FromSeconds(value);
+                    _lastRawPositionSeconds = value;
+                    _positionInterpolation.Restart();
+                    RaisePropertyChanged(nameof(SoundPositionSeconds));
+                }
+            }
+        }
+
+        public double SoundLengthSeconds
+        {
+            get { return _soundLengthSeconds; }
+        }
+
+        // called on playback start, window activation/restore and by the watchdog;
+        // brings the seekbar up to date and resumes per-frame updates when they are
+        // worth running again
+        public void RefreshSeekbarRendering()
+        {
+            UpdateSoundPosition();
+
+            if (!_soundManager.IsPlaying)
+            {
+                _seekbarWatchdog.Stop();
+            }
+            else if (IsSeekbarVisibleToUser())
+            {
+                _seekbarWatchdog.Stop();
+                if (!_seekbarRenderingAttached)
+                {
+                    _seekbarRenderingAttached = true;
+                    System.Windows.Media.CompositionTarget.Rendering += OnSeekbarRendering;
+                }
+            }
+            else
+            {
+                _seekbarWatchdog.Start();
+            }
+        }
+
+        private void OnSeekbarRendering(object sender, EventArgs e)
+        {
+            UpdateSoundPosition();
+
+            // paused, stopped, finished, or the window can no longer be seen - stop
+            // per-frame updates; the final UpdateSoundPosition above already left the
+            // seekbar showing the resting position, and the watchdog brings it back
+            // for a sound that is still playing
+            if (!_soundManager.IsPlaying || !IsSeekbarVisibleToUser())
+            {
+                _seekbarRenderingAttached = false;
+                System.Windows.Media.CompositionTarget.Rendering -= OnSeekbarRendering;
+                if (_soundManager.IsPlaying)
+                {
+                    _seekbarWatchdog.Start();
+                }
+            }
+        }
+
+        private bool IsSeekbarVisibleToUser()
+        {
+            Window window = Application.Current != null ? Application.Current.MainWindow : null;
+            if (window == null || !window.IsVisible || window.WindowState == WindowState.Minimized)
+            {
+                return false;
+            }
+            return !FullscreenDetector.IsCoveredByFullscreenApp(_windowHandle);
+        }
+
+        private void UpdateSoundPosition()
+        {
+            double length = _soundManager.CurrentSoundLength.TotalSeconds;
+            double rawPosition = _soundManager.CurrentSoundPosition.TotalSeconds;
+
+            bool isPlaying = _soundManager.IsPlaying;
+            if (Math.Abs(rawPosition - _lastRawPositionSeconds) > 0.001 || isPlaying != _wasPlaying)
+            {
+                // a fresh reading from the decoder (new buffer, seek or loop wrap)
+                // or a pause/resume - resync the wall clock to the real position
+                _lastRawPositionSeconds = rawPosition;
+                _positionInterpolation.Restart();
+                _wasPlaying = isPlaying;
+            }
+
+            double position = rawPosition;
+            if (isPlaying)
+            {
+                // between decoder readings, advance with the wall clock; a new reading
+                // arrives every audio buffer, so cap the extrapolation at one buffer to
+                // keep a stalled pipeline from running the bar ahead
+                position += Math.Min(_positionInterpolation.Elapsed.TotalSeconds, 0.2);
+            }
+            position = Math.Min(position, length);
+
+            // when a buffer arrives late, the resynced position can land slightly behind
+            // the extrapolated one; hold still instead of ticking backwards (real backward
+            // jumps from seeking or looping are larger and pass through)
+            if (isPlaying && position < _soundPositionSeconds && _soundPositionSeconds - position < 0.3)
+            {
+                position = _soundPositionSeconds;
+            }
+
+            if (Math.Abs(length - _soundLengthSeconds) > 0.001)
+            {
+                _soundLengthSeconds = length;
+                RaisePropertyChanged(nameof(SoundLengthSeconds));
+            }
+            if (Math.Abs(position - _soundPositionSeconds) > 0.001)
+            {
+                _soundPositionSeconds = position;
+                RaisePropertyChanged(nameof(SoundPositionSeconds));
+            }
         }
 
         public IntPtr WindowHandle
         {
             set
             {
+                _windowHandle = value;
                 _keyboardInput = new KeyboardInput(value);
                 _keyboardInput.KeyUp += _shortcutManager.KeyUp;
                 _keyboardInput.KeyDown += _shortcutManager.KeyDown;

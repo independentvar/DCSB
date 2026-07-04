@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using System;
 
 namespace DCSB.SoundPlayer
 {
@@ -10,6 +11,23 @@ namespace DCSB.SoundPlayer
         private bool _loop;
 
         public WaveFormat WaveFormat { get; private set; }
+
+        public TimeSpan CurrentTime
+        {
+            get { return IsDisposed ? TimeSpan.Zero : _reader.CurrentTime; }
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _reader.CurrentTime = value;
+                }
+            }
+        }
+
+        public TimeSpan TotalTime
+        {
+            get { return IsDisposed ? TimeSpan.Zero : _reader.TotalTime; }
+        }
 
         public SampleReader(IAudioReader reader, bool loop)
         {

@@ -89,12 +89,27 @@
                                  Margin="2"
                                  Command="{Binding PauseCommand}"
                                  ToolTip="Pause" />
-            <Controls:IconButton DockPanel.Dock="Right" 
-                                 Content="{StaticResource StopIcon}" 
+            <Controls:IconButton DockPanel.Dock="Right"
+                                 Content="{StaticResource StopIcon}"
                                  Margin="2"
                                  Command="{Binding StopCommand}"
                                  ToolTip="Stop" />
-            <StackPanel />
+            <Slider VerticalAlignment="Center"
+                    Margin="5,0"
+                    Maximum="{Binding SoundLengthSeconds, Mode=OneWay}"
+                    Value="{Binding SoundPositionSeconds, Mode=TwoWay}"
+                    IsMoveToPointEnabled="True"
+                    ToolTip="Seek">
+                <Slider.Style>
+                    <Style TargetType="{x:Type Slider}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SoundLengthSeconds}" Value="0">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Slider.Style>
+            </Slider>
         </DockPanel>
 
         <Grid>
@@ -119,7 +134,9 @@
 
             <DataGrid.Resources>
                 <ContextMenu x:Key="RowMenu" DataContext="{Binding}">
-                    <MenuItem Header="Edit" 
+                    <MenuItem Header="Play"
+                              Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                    <MenuItem Header="Edit"
                               Command="{Binding DataContext.OpenSoundCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
                     <MenuItem Header="Remove" 
                               Command="{Binding DataContext.RemoveSoundCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />

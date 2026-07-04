@@ -58,6 +58,10 @@ namespace DCSB.Business
             }
         }
 
+        // raised whenever playback (re)starts, from the UI or a global hotkey;
+        // lets the UI run its seekbar updates only while something is playing
+        public event EventHandler PlaybackStarted;
+
         public SoundManager(ConfigurationModel configurationModel)
         {
             _random = new Random();
@@ -88,6 +92,45 @@ namespace DCSB.Business
             {
                 sound.Error = ex.ToString();
             }
+            if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
+        }
+
+        // position of the most recently started sound; both outputs play the same
+        // file in sync, so the primary output (or the secondary when the primary is
+        // disabled) is the source of truth and seeking is applied to both
+        public TimeSpan CurrentSoundPosition
+        {
+            get
+            {
+                if (_primarySoundPlayer != null) return _primarySoundPlayer.CurrentTime;
+                if (_secondarySoundPlayer != null) return _secondarySoundPlayer.CurrentTime;
+                return TimeSpan.Zero;
+            }
+            set
+            {
+                if (_primarySoundPlayer != null) _primarySoundPlayer.CurrentTime = value;
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.CurrentTime = value;
+            }
+        }
+
+        public TimeSpan CurrentSoundLength
+        {
+            get
+            {
+                if (_primarySoundPlayer != null) return _primarySoundPlayer.TotalTime;
+                if (_secondarySoundPlayer != null) return _secondarySoundPlayer.TotalTime;
+                return TimeSpan.Zero;
+            }
+        }
+
+        public bool IsPlaying
+        {
+            get
+            {
+                if (_primarySoundPlayer != null) return _primarySoundPlayer.IsPlaying;
+                if (_secondarySoundPlayer != null) return _secondarySoundPlayer.IsPlaying;
+                return false;
+            }
         }
 
         public void Pause()
@@ -100,6 +143,7 @@ namespace DCSB.Business
         {
             if (_primarySoundPlayer != null) _primarySoundPlayer.Continue();
             if (_secondarySoundPlayer != null) _secondarySoundPlayer.Continue();
+            if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
         }
 
         public void Stop()
