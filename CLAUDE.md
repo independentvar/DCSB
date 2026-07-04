@@ -13,6 +13,7 @@ Deathcounter and Soundboard (DCSB) — a .NET Framework 4.8.1 WPF app using MVVM
 - CI builds every push and PR. PRs into `master` require the `build` check (branch protection). PR runs for same-repo branches are deduplicated: the pull_request-event job is skipped and the push-event run provides the real result.
 - **Releasing is automatic**: merging to `master` builds the NSIS installer and publishes a GitHub release tagged `v<version>` from `AssemblyVersionInfo.cs`. Pushing the same version twice updates the existing release instead of creating a new one — bump the version to get a new release.
 - `AssemblyVersionInfo.cs` at the repo root is link-included into every project; it is the single source of the app version and the release tag.
+- **Every PR that changes shipped code must bump the version in `AssemblyVersionInfo.cs` in that same PR** (update both `AssemblyVersion` and `AssemblyFileVersion`; increment the third component for fixes, the second for features). Merging without a bump silently overwrites the existing release instead of publishing a new one. Only skip the bump for changes that don't affect the shipped app (CI, docs, tests-only).
 
 ## Gotchas
 
