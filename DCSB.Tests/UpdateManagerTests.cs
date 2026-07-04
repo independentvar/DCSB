@@ -26,17 +26,15 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(FormatException))]
         public void ParseVersion_TagWithoutFourPartVersion_Throws()
         {
-            UpdateManager.ParseVersion("v4.2.1");
+            Assert.Throws<FormatException>(() => UpdateManager.ParseVersion("v4.2.1"));
         }
 
         [TestMethod]
-        [ExpectedException(typeof(FormatException))]
         public void ParseVersion_TagWithNoVersion_Throws()
         {
-            UpdateManager.ParseVersion("latest");
+            Assert.Throws<FormatException>(() => UpdateManager.ParseVersion("latest"));
         }
     }
 }
