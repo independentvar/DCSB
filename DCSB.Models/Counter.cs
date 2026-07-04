@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
@@ -14,7 +14,7 @@ namespace DCSB.Models
             set
             {
                 _name = value;
-                RaisePropertyChanged("Name");
+                OnPropertyChanged("Name");
             }
         }
 
@@ -26,7 +26,7 @@ namespace DCSB.Models
             set
             {
                 _file = value;
-                RaisePropertyChanged("File");
+                OnPropertyChanged("File");
                 ReadFromFile();
                 // if the file content could not be parsed, don't overwrite it with the
                 // current (likely stale) count - that would destroy the user's data
@@ -45,7 +45,7 @@ namespace DCSB.Models
             set
             {
                 _format = value;
-                RaisePropertyChanged("Format");
+                OnPropertyChanged("Format");
                 WriteToFile();
             }
         }
@@ -58,7 +58,7 @@ namespace DCSB.Models
             set
             {
                 _count = value;
-                RaisePropertyChanged("Count");
+                OnPropertyChanged("Count");
                 WriteToFile();
             }
         }
@@ -71,7 +71,7 @@ namespace DCSB.Models
             set
             {
                 _increment = value;
-                RaisePropertyChanged("Increment");
+                OnPropertyChanged("Increment");
             }
         }
 
@@ -83,7 +83,7 @@ namespace DCSB.Models
             set
             {
                 _error = value;
-                RaisePropertyChanged("Error");
+                OnPropertyChanged("Error");
             }
         }
 

@@ -2,7 +2,7 @@
 using System.Windows.Input;
 using System.Xml.Serialization;
 using DCSB.Utils;
-using GalaSoft.MvvmLight;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DCSB.Models
 {
@@ -15,7 +15,7 @@ namespace DCSB.Models
             set
             {
                 _keys = value;
-                RaisePropertyChanged("Keys");
+                OnPropertyChanged("Keys");
             }
         }
 
@@ -26,7 +26,7 @@ namespace DCSB.Models
         {
             _keys = new ObservableCollection<VKey>();
 
-            _keys.CollectionChanged += (sender, e) => RaisePropertyChanged("Keys");
+            _keys.CollectionChanged += (sender, e) => OnPropertyChanged("Keys");
         }
     }
 }

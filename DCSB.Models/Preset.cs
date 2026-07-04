@@ -1,4 +1,4 @@
-using GalaSoft.MvvmLight;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using DCSB.Utils;
 using System.Collections.ObjectModel;
 using System.Xml.Serialization;
@@ -15,7 +15,7 @@ namespace DCSB.Models
             set
             {
                 _keys = value;
-                RaisePropertyChanged("Keys");
+                OnPropertyChanged("Keys");
             }
         }
 
@@ -26,7 +26,7 @@ namespace DCSB.Models
             set
             {
                 _counterCollection = value;
-                RaisePropertyChanged("CounterCollection");
+                OnPropertyChanged("CounterCollection");
             }
         }
 
@@ -37,7 +37,7 @@ namespace DCSB.Models
             set
             {
                 _soundCollection = value;
-                RaisePropertyChanged("SoundCollection");
+                OnPropertyChanged("SoundCollection");
             }
         }
 
@@ -48,7 +48,7 @@ namespace DCSB.Models
             set
             {
                 _name = value;
-                RaisePropertyChanged("Name");
+                OnPropertyChanged("Name");
             }
         }
 
@@ -60,7 +60,7 @@ namespace DCSB.Models
             set
             {
                 _selectedCounter = value;
-                RaisePropertyChanged("SelectedCounter");
+                OnPropertyChanged("SelectedCounter");
             }
         }
 
@@ -72,7 +72,7 @@ namespace DCSB.Models
             set
             {
                 _selectedSound = value;
-                RaisePropertyChanged("SelectedSound");
+                OnPropertyChanged("SelectedSound");
             }
         }
 
@@ -82,11 +82,11 @@ namespace DCSB.Models
             _counterCollection = new ObservableObjectCollection<Counter>();
             _soundCollection = new ObservableObjectCollection<Sound>();
 
-            Keys.CollectionChanged += (sender, e) => RaisePropertyChanged("Keys");
-            CounterCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("CounterCollection");
-            CounterCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("SelectedCounter");
-            SoundCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("SoundCollection");
-            SoundCollection.CollectionChanged += (sender, e) => RaisePropertyChanged("SelectedSound");
+            Keys.CollectionChanged += (sender, e) => OnPropertyChanged("Keys");
+            CounterCollection.CollectionChanged += (sender, e) => OnPropertyChanged("CounterCollection");
+            CounterCollection.CollectionChanged += (sender, e) => OnPropertyChanged("SelectedCounter");
+            SoundCollection.CollectionChanged += (sender, e) => OnPropertyChanged("SoundCollection");
+            SoundCollection.CollectionChanged += (sender, e) => OnPropertyChanged("SelectedSound");
         }
 
         public object Clone()
