@@ -3,7 +3,6 @@ using DCSB.SoundPlayer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace DCSB.Business
 {
@@ -111,28 +110,34 @@ namespace DCSB.Business
 
         private string InstantiateDevice(string deviceName, bool primary, ref AudioPlaybackEngine soundPlayer)
         {
-            KeyValuePair<int, string> device = GetDevice(deviceName, primary);
+            // fall back to the default output device only when no device was ever chosen
+            // (first run); an explicitly chosen device that is currently missing must not
+            // be silently replaced with the speakers
+            if (primary && string.IsNullOrEmpty(deviceName))
+            {
+                deviceName = AudioPlaybackEngine.DefaultDeviceName;
+            }
 
-            if (device.Equals(default(KeyValuePair<int, string>)) || device.Value == "Disabled")
+            string resolvedName = AudioPlaybackEngine.ResolveDeviceName(deviceName);
+            if (resolvedName == null)
             {
                 soundPlayer = null;
-                return "Disabled";
+                return AudioPlaybackEngine.DisabledDeviceName;
             }
 
             try
             {
-                soundPlayer = new AudioPlaybackEngine(device.Key);
+                soundPlayer = new AudioPlaybackEngine(resolvedName);
             }
             catch (Exception e)
             {
-                // opening the device can fail (e.g. NAudio.MmException: AlreadyAllocated when
-                // another application holds it exclusively) - disable the output instead of
-                // crashing on startup
+                // opening the device can fail (e.g. when another application holds it
+                // exclusively) - disable the output instead of crashing on startup
                 Debug.WriteLine(e);
                 soundPlayer = null;
-                return "Disabled";
+                return AudioPlaybackEngine.DisabledDeviceName;
             }
-            return device.Value;
+            return resolvedName;
         }
 
         private string ChangeDevice(string deviceName, float deviceVolume, bool primary, ref AudioPlaybackEngine soundPlayer)
@@ -166,23 +171,7 @@ namespace DCSB.Business
 
         public ICollection<string> EnumerateDevices()
         {
-            return AudioPlaybackEngine.EnumerateDevices().Values;
-        }
-
-        public KeyValuePair<int, string> GetDevice(string name, bool primary)
-        {
-            IDictionary<int, string> devices = AudioPlaybackEngine.EnumerateDevices();
-            KeyValuePair<int, string> device = devices.Where(x => x.Value == name).FirstOrDefault();
-
-            // fall back to the default output device only when no device was ever chosen
-            // (first run); an explicitly chosen device that is currently missing must not
-            // be silently replaced with the speakers
-            if (primary && string.IsNullOrEmpty(name) && devices.Count > 2)
-            {
-                return new KeyValuePair<int, string>(-1, devices[-1]);
-            }
-
-            return device;
+            return AudioPlaybackEngine.EnumerateDevices();
         }
 
         ~SoundManager()

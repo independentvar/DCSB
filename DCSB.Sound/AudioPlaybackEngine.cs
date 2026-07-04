@@ -1,4 +1,5 @@
 using NAudio;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
@@ -9,24 +10,43 @@ namespace DCSB.SoundPlayer
 {
     public class AudioPlaybackEngine
     {
-        private readonly WaveOutEvent _outputDevice;
+        public const string DisabledDeviceName = "Disabled";
+        public const string DefaultDeviceName = "Default Output Device";
+
+        // WaveOut device names (used by older versions) were truncated to 31 characters
+        private const int LegacyDeviceNameLength = 31;
+
+        private readonly WasapiOut _outputDevice;
         private readonly MixingSampleProvider _mixer;
+        private readonly VolumeSampleProvider _masterVolume;
 
         private int _volumePowBase = 100;
 
         public float Volume
         {
-            get { return RevertVolume(_outputDevice.Volume); }
-            set { _outputDevice.Volume = AdjustVolume(value); }
+            get { return RevertVolume(_masterVolume.Volume); }
+            set { _masterVolume.Volume = AdjustVolume(value); }
         }
 
         public bool Overlap { get; set; }
 
-        public AudioPlaybackEngine(int deviceNumber)
+        public AudioPlaybackEngine(string deviceName)
         {
-            _outputDevice = new WaveOutEvent() { DeviceNumber = deviceNumber };
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(44100, 2)) { ReadFully = true };
-            _outputDevice.Init(_mixer);
+            MMDevice device = FindDevice(deviceName);
+            if (device == null)
+            {
+                throw new ArgumentException($"Output device '{deviceName}' was not found.", nameof(deviceName));
+            }
+
+            // mix at the endpoint's own sample rate so no rate conversion happens between
+            // the app and the device (avoids crackling with virtual cables, see issue #154)
+            WaveFormat mixFormat = device.AudioClient.MixFormat;
+            int channels = Math.Min(mixFormat.Channels, 2);
+            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(mixFormat.SampleRate, channels)) { ReadFully = true };
+            _masterVolume = new VolumeSampleProvider(_mixer);
+
+            _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, 100);
+            _outputDevice.Init(_masterVolume);
             _outputDevice.Play();
         }
 
@@ -81,8 +101,6 @@ namespace DCSB.SoundPlayer
         {
             _mixer.RemoveAllMixerInputs();
             _outputDevice.Stop();
-            if (EnumerateDevices().ContainsKey(_outputDevice.DeviceNumber))
-                _outputDevice.Init(_mixer);
         }
 
         private ISampleProvider ConvertToRightChannelCount(ISampleProvider input)
@@ -94,6 +112,10 @@ namespace DCSB.SoundPlayer
             if (input.WaveFormat.Channels == 1 && _mixer.WaveFormat.Channels == 2)
             {
                 return new MonoToStereoSampleProvider(input);
+            }
+            if (input.WaveFormat.Channels == 2 && _mixer.WaveFormat.Channels == 1)
+            {
+                return new StereoToMonoSampleProvider(input);
             }
             throw new NotImplementedException($"Channel conversion from {input.WaveFormat.Channels} to {_mixer.WaveFormat.Channels} is not supported.");
         }
@@ -124,24 +146,87 @@ namespace DCSB.SoundPlayer
             return (int)(Math.Log(volume * (_volumePowBase - 1) + 1) / Math.Log(_volumePowBase));
         }
 
-        public static IDictionary<int, string> EnumerateDevices()
+        public static ICollection<string> EnumerateDevices()
         {
-            Dictionary<int, string> devices = new Dictionary<int, string>
-            {
-                [-2] = "Disabled"
-            };
+            List<string> devices = new List<string> { DisabledDeviceName };
 
-            if (WaveOut.DeviceCount != 0)
+            using (MMDeviceEnumerator enumerator = new MMDeviceEnumerator())
             {
-                devices[-1] = "Default Output Device";
-
-                for (int n = 0; n < WaveOut.DeviceCount; n++)
+                MMDeviceCollection endpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                if (endpoints.Count != 0)
                 {
-                    devices[n] = WaveOut.GetCapabilities(n).ProductName;
+                    devices.Add(DefaultDeviceName);
+                    foreach (MMDevice endpoint in endpoints)
+                    {
+                        devices.Add(endpoint.FriendlyName);
+                    }
                 }
             }
 
             return devices;
+        }
+
+        // Returns the full friendly name of the matching device (or DefaultDeviceName),
+        // upgrading names truncated by the old WaveOut enumeration; null when not found.
+        public static string ResolveDeviceName(string deviceName)
+        {
+            if (string.IsNullOrEmpty(deviceName) || deviceName == DisabledDeviceName)
+            {
+                return null;
+            }
+
+            using (MMDeviceEnumerator enumerator = new MMDeviceEnumerator())
+            {
+                if (deviceName == DefaultDeviceName)
+                {
+                    return enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia) ? DefaultDeviceName : null;
+                }
+
+                MMDeviceCollection endpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                foreach (MMDevice endpoint in endpoints)
+                {
+                    if (endpoint.FriendlyName == deviceName)
+                    {
+                        return endpoint.FriendlyName;
+                    }
+                }
+                if (deviceName.Length >= LegacyDeviceNameLength)
+                {
+                    foreach (MMDevice endpoint in endpoints)
+                    {
+                        if (endpoint.FriendlyName.StartsWith(deviceName, StringComparison.Ordinal))
+                        {
+                            return endpoint.FriendlyName;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static MMDevice FindDevice(string deviceName)
+        {
+            using (MMDeviceEnumerator enumerator = new MMDeviceEnumerator())
+            {
+                if (deviceName == DefaultDeviceName)
+                {
+                    return enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia)
+                        ? enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia)
+                        : null;
+                }
+
+                MMDeviceCollection endpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                foreach (MMDevice endpoint in endpoints)
+                {
+                    if (endpoint.FriendlyName == deviceName)
+                    {
+                        return endpoint;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public void Dispose()
