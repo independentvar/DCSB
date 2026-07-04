@@ -1,9 +1,8 @@
-﻿using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight;
 using DCSB.Utils;
 using System.Collections.ObjectModel;
 using System.Xml.Serialization;
 using System;
-using System.Linq;
 
 namespace DCSB.Models
 {
