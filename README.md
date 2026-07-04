@@ -47,6 +47,12 @@ You can create Presets to quickly switch between lists of counters and sounds fo
 -	Display/hide counters or sounds
 -	Minimize to tray
 
+## Using DCSB with Discord or other voice apps (virtual audio cables)
+To play sounds into a voice chat, set one of DCSB's output devices to a virtual cable (e.g. **CABLE Input** from [VB-Audio Virtual Cable](https://vb-audio.com/Cable/)) and select the cable's other end (**CABLE Output**) as the microphone in your voice app. If the sound comes out choppy, scratchy or "pixelated" on the other side:
+
+- **Match the cable's sample rates.** In Windows Sound settings (*Sound Control Panel → Properties → Advanced*), set both the **CABLE Input** playback device and the **CABLE Output** recording device to the same format, ideally **48000 Hz, 2 channels**. Mismatched rates between the two ends are the most common cause of crackling.
+- **Turn off voice processing in the voice app.** Discord's noise suppression, echo cancellation and automatic gain control treat music and sound effects as noise and will gate or distort them. Disable them for the cable input, or use Push to Talk while testing.
+
 ## Please read:
 If you come across any bug, something stops working or the program crashes please create issue here. Include as much information as you can provide (any error messages, what stopped working, what were you doing when it happened, what version you are using...).
 Usually restarting the program/running it as an administrator helps.
