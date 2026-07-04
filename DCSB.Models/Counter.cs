@@ -28,7 +28,12 @@ namespace DCSB.Models
                 _file = value;
                 RaisePropertyChanged("File");
                 ReadFromFile();
-                WriteToFile();
+                // if the file content could not be parsed, don't overwrite it with the
+                // current (likely stale) count - that would destroy the user's data
+                if (Error == null)
+                {
+                    WriteToFile();
+                }
             }
         }
 
@@ -138,7 +143,10 @@ namespace DCSB.Models
                         return;
                     }
 
-                    string pattern = "^" + Format.Replace("{0}", @"(?<count>\d+)") + "$";
+                    // escape the format so literal regex metacharacters (e.g. "({0})") don't
+                    // break the pattern; allow a sign (Count can go negative via decrement)
+                    // and trailing whitespace (external editors often append a newline)
+                    string pattern = "^" + Regex.Escape(Format).Replace(@"\{0}", @"(?<count>-?\d+)") + @"\s*$";
                     Regex regex = new Regex(pattern);
                     Match match = regex.Match(fileContent);
 
