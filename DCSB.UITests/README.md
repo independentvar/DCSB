@@ -33,6 +33,8 @@ machine).
 | `Test-PlaybackProducesAudio` | Double-clicking a sound produces measurable signal on the selected device; interrupt-and-replay and replay-after-finish both restart the shared `WasapiOut` correctly. |
 | `Test-DeviceDropdownFullNames` | Settings → Sound dropdowns list `Disabled`, `Default Output Device`, and every active render endpoint with its full untruncated name. |
 | `Test-LiveDeviceSwitch` | Switching the first output device at runtime (disposes and recreates the playback engine) doesn't crash, and playback works after switching back. |
+| `Test-AddSoundNamePrefill` | Selecting file/s in the Sound dialog prefills an empty Name with the first file's name (without extension); a later selection doesn't overwrite an already-set name. |
+| `Test-AddCounterNamePrefill` | Same prefill behavior for the Counter dialog's file picker. |
 
 ## Safety around user state
 

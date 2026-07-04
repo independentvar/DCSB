@@ -311,7 +311,12 @@ namespace DCSB.ViewModels
             string result = _openFileManager.OpenCounterFile();
             if (result != null)
             {
-                _configurationModel.SelectedPreset.SelectedCounter.File = result;
+                Counter counter = _configurationModel.SelectedPreset.SelectedCounter;
+                counter.File = result;
+                if (string.IsNullOrWhiteSpace(counter.Name))
+                {
+                    counter.Name = Path.GetFileNameWithoutExtension(result);
+                }
             }
         }
 
@@ -324,10 +329,15 @@ namespace DCSB.ViewModels
             string[] result = _openFileManager.OpenSoundFiles();
             if (result != null)
             {
-                _configurationModel.SelectedPreset.SelectedSound.Files.Clear();
+                Sound sound = _configurationModel.SelectedPreset.SelectedSound;
+                sound.Files.Clear();
                 foreach (string file in result)
                 {
-                    _configurationModel.SelectedPreset.SelectedSound.Files.Add(file);
+                    sound.Files.Add(file);
+                }
+                if (result.Length > 0 && string.IsNullOrWhiteSpace(sound.Name))
+                {
+                    sound.Name = Path.GetFileNameWithoutExtension(result[0]);
                 }
             }
         }
