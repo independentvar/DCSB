@@ -71,7 +71,14 @@ namespace DCSB
             if (notifyIcon != null)
                 notifyIcon.Dispose();
 
+            if (DataContext is ViewModel viewModel)
+                viewModel.Dispose();
+
             base.OnClosed(e);
+
+            // Ensure the app actually terminates: tear down the WPF dispatcher even if the
+            // close came from a nested message loop (e.g. the tray icon's context menu).
+            System.Windows.Application.Current?.Shutdown();
         }
 
         private void WindowLoaded(object sender, RoutedEventArgs e)

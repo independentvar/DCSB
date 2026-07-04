@@ -5,12 +5,13 @@ using System.Runtime.InteropServices;
 
 namespace DCSB.Input
 {
-    public class RawInput : NativeWindow
+    public class RawInput : NativeWindow, IDisposable
     {
         static RawKeyboard _keyboardDriver;
         readonly IntPtr _devNotifyHandle;
         static readonly Guid DeviceInterfaceHid = new Guid("4D1E55B2-F16F-11CF-88CB-001111000030");
         private PreMessageFilter _filter;
+        private bool _disposed;
 
         public  event RawKeyboard.DeviceEventHandler KeyPressed
         {
@@ -127,9 +128,29 @@ namespace DCSB.Input
             }
         }
         
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            RemoveMessageFilter();
+            if (_devNotifyHandle != IntPtr.Zero)
+            {
+                Win32.UnregisterDeviceNotification(_devNotifyHandle);
+            }
+            // detach this NativeWindow from the (now closing) main-window handle so it
+            // stops receiving WM_INPUT / device-change messages
+            ReleaseHandle();
+            _disposed = true;
+        }
+
         ~RawInput()
         {
-            Win32.UnregisterDeviceNotification(_devNotifyHandle);
+            Dispose(false);
         }
     }
 }

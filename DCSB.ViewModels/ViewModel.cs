@@ -16,7 +16,7 @@ using System.Windows.Threading;
 
 namespace DCSB.ViewModels
 {
-    public class ViewModel : ObservableObject
+    public class ViewModel : ObservableObject, IDisposable
     {
         private ApplicationStateModel _applicationStateModel;
         private ConfigurationModel _configurationModel;
@@ -784,6 +784,35 @@ namespace DCSB.ViewModels
         private void Closing()
         {
             _configurationManager.Dispose();
+        }
+
+        // Called when the main window closes. Tears down everything that would
+        // otherwise keep DCSB.exe alive after the window is gone: the global input
+        // hooks and the WASAPI playback threads (a foreground thread that blocks
+        // process exit), plus the seekbar rendering hook, timer and config flush.
+        public void Dispose()
+        {
+            if (_seekbarRenderingAttached)
+            {
+                _seekbarRenderingAttached = false;
+                System.Windows.Media.CompositionTarget.Rendering -= OnSeekbarRendering;
+            }
+            if (_seekbarWatchdog != null)
+            {
+                _seekbarWatchdog.Stop();
+            }
+            if (_keyboardInput != null)
+            {
+                _keyboardInput.Dispose();
+            }
+            if (_soundManager != null)
+            {
+                _soundManager.Dispose();
+            }
+            if (_configurationManager != null)
+            {
+                _configurationManager.Dispose();
+            }
         }
 
         private bool AreCountersEnabled()
