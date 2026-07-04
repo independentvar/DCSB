@@ -27,6 +27,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # Need history so the test-only diff below can compare against the
+          # previous master tip (github.event.before).
+          fetch-depth: 0
+
+      # A push that only touches the test projects still needs to build and run
+      # tests, but must not cut a release. Compute whether every changed file
+      # lives under a test project so the release step can be skipped.
+      - name: Detect test-only change
+        id: changes
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $before = "${{ github.event.before }}"
+          $onlyTests = "false"
+          if ($before -and $before -notmatch '^0+$') {
+            $files = git diff --name-only $before "${{ github.event.after }}" |
+              Where-Object { $_ -ne "" }
+            if ($files) {
+              $nonTest = $files | Where-Object {
+                $_ -notmatch '^(DCSB\.Tests|DCSB\.UITests)/'
+              }
+              if (-not $nonTest) { $onlyTests = "true" }
+            }
+          }
+          "only_tests=$onlyTests" >> $env:GITHUB_OUTPUT
+          Write-Host "Test-only change: $onlyTests"
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
@@ -82,7 +109,7 @@ jobs:
           path: Installers/DCSB_*.exe
 
       - name: Create release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
