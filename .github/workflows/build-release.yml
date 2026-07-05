@@ -47,7 +47,9 @@ jobs:
               Where-Object { $_ -ne "" }
             if ($files) {
               $nonTest = $files | Where-Object {
-                $_ -notmatch '^(DCSB\.Tests|DCSB\.UITests)/'
+                # Treat test projects, CI/workflow files, installers, docs and common repo files
+                # as non-user-impacting so they don't trigger a release.
+                $_ -notmatch '^(DCSB\.Tests/|DCSB\.UITests/|\.github/|Installers/|docs?/|README\.md$|LICENSE$|\.gitignore$)'
               }
               if (-not $nonTest) { $onlyTests = "true" }
             }
