@@ -31,14 +31,14 @@
         <TextBox Grid.Row="1" Grid.Column="1" Margin="5" IsReadOnly="True" AcceptsReturn="True" MaxHeight="250" 
                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Cursor="Arrow"
                  Text="{Binding ApplicationStateModel.ModifiedSound.Files, Converter={StaticResource concatStringsConverter}, ConverterParameter='&#x0a;'}"
-                 Interactivity:Commands.DoubleClickCommand="{Binding OpenSoundFileDialogCommand}" />
+                 Interactivity:Commands.SingleClickCommand="{Binding OpenSoundFileDialogCommand}" />
         <Button Grid.Row="1" Grid.Column="2" Margin="0,5,5,5" Width="20" Command="{Binding OpenSoundFileDialogCommand}">...</Button>
 
         <Label Grid.Row="2" Grid.Column="0">Key/s:</Label>
         <TextBox Grid.Row="2" Grid.Column="1" Margin="5" IsReadOnly="True"
                  Text="{Binding ApplicationStateModel.ModifiedSound.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                 Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                 Interactivity:Commands.DoubleClickCommandParameter="{Binding ApplicationStateModel.ModifiedSound}" />
+                 Interactivity:Commands.SingleClickCommand="{Binding BindKeysCommand}"
+                 Interactivity:Commands.SingleClickCommandParameter="{Binding ApplicationStateModel.ModifiedSound}" />
         <Button Grid.Row="2" Grid.Column="2" Margin="0,5,5,5" Width="20" Command="{Binding BindKeysCommand}" 
                 CommandParameter="{Binding ApplicationStateModel.ModifiedSound}">...</Button>
 
