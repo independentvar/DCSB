@@ -87,6 +87,34 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesOverlaySettings()
+        {
+            ConfigurationModel model = new ConfigurationModel { OverlayEnabled = false, OverlayOpacity = 40 };
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.IsFalse(loaded.OverlayEnabled);
+            Assert.AreEqual(40, loaded.OverlayOpacity);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutOverlayElements_UsesDefaults()
+        {
+            // configs written by older versions have no overlay elements;
+            // the overlay must be on by default at full opacity
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.IsTrue(loaded.OverlayEnabled);
+            Assert.AreEqual(100, loaded.OverlayOpacity);
+        }
+
+        [TestMethod]
         public void RoundTrip_DoesNotSerializeXmlIgnoredSelectedPreset()
         {
             ConfigurationModel model = new ConfigurationModel();

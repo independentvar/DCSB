@@ -59,14 +59,7 @@ namespace DCSB.Utils
                 return false;
             }
 
-            IntPtr foreground = GetForegroundWindow();
-            if (foreground == IntPtr.Zero || foreground == GetShellWindow() || foreground == GetDesktopWindow())
-            {
-                return false;
-            }
-
-            GetWindowThreadProcessId(foreground, out uint foregroundProcessId);
-            if (foregroundProcessId == _currentProcessId)
+            if (!TryGetForeignForegroundWindow(out IntPtr foreground))
             {
                 return false;
             }
@@ -77,8 +70,50 @@ namespace DCSB.Utils
                 return false;
             }
 
-            MONITORINFO info = new MONITORINFO { Size = Marshal.SizeOf(typeof(MONITORINFO)) };
-            if (!GetMonitorInfo(monitor, ref info) || !GetWindowRect(foreground, out RECT rect))
+            return SpansMonitor(foreground, monitor, out _);
+        }
+
+        // true when another process' foreground window spans the entire monitor it is
+        // on (a fullscreen or borderless-fullscreen game, on any monitor); outputs that
+        // monitor's bounds in physical pixels
+        public static bool TryGetFullscreenAppBounds(out int left, out int top, out int width, out int height)
+        {
+            left = top = width = height = 0;
+
+            if (!TryGetForeignForegroundWindow(out IntPtr foreground))
+            {
+                return false;
+            }
+
+            IntPtr monitor = MonitorFromWindow(foreground, MonitorDefaultToNearest);
+            if (!SpansMonitor(foreground, monitor, out MONITORINFO info))
+            {
+                return false;
+            }
+
+            left = info.Monitor.Left;
+            top = info.Monitor.Top;
+            width = info.Monitor.Right - info.Monitor.Left;
+            height = info.Monitor.Bottom - info.Monitor.Top;
+            return true;
+        }
+
+        private static bool TryGetForeignForegroundWindow(out IntPtr foreground)
+        {
+            foreground = GetForegroundWindow();
+            if (foreground == IntPtr.Zero || foreground == GetShellWindow() || foreground == GetDesktopWindow())
+            {
+                return false;
+            }
+
+            GetWindowThreadProcessId(foreground, out uint foregroundProcessId);
+            return foregroundProcessId != _currentProcessId;
+        }
+
+        private static bool SpansMonitor(IntPtr window, IntPtr monitor, out MONITORINFO info)
+        {
+            info = new MONITORINFO { Size = Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(monitor, ref info) || !GetWindowRect(window, out RECT rect))
             {
                 return false;
             }

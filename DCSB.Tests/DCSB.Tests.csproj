@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net481</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- DCSB.Converters exposes IValueConverter types, which need the WPF assemblies -->
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -11,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DCSB.Business\DCSB.Business.csproj" />
+    <ProjectReference Include="..\DCSB.Converters\DCSB.Converters.csproj" />
     <ProjectReference Include="..\DCSB.Models\DCSB.Models.csproj" />
     <ProjectReference Include="..\DCSB.Utils\DCSB.Utils.csproj" />
   </ItemGroup>
