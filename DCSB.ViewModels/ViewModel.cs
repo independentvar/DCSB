@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Windows;
@@ -226,6 +227,12 @@ namespace DCSB.ViewModels
         {
             get { return _applicationStateModel; }
         }
+
+        // Live SelectedItems lists of the counter/sound DataGrids, pushed in by
+        // DataGridBehaviors.SyncSelectedItems so Remove can delete multi-selections.
+        public IList SelectedCounters { get; set; }
+
+        public IList SelectedSounds { get; set; }
 
         public ConfigurationModel ConfigurationModel
         {
@@ -529,9 +536,40 @@ namespace DCSB.ViewModels
         }
         private void RemoveCounter()
         {
-            if (_configurationModel.SelectedPreset.SelectedCounter != null)
+            Preset preset = _configurationModel.SelectedPreset;
+            List<Counter> countersToRemove = new List<Counter>();
+            if (SelectedCounters != null && SelectedCounters.Count > 0)
             {
-                _configurationModel.SelectedPreset.CounterCollection.Remove(_configurationModel.SelectedPreset.SelectedCounter);
+                foreach (object item in SelectedCounters)
+                {
+                    countersToRemove.Add((Counter)item);
+                }
+            }
+            else if (preset.SelectedCounter != null)
+            {
+                countersToRemove.Add(preset.SelectedCounter);
+            }
+            if (countersToRemove.Count == 0)
+            {
+                return;
+            }
+
+            int index = preset.CounterCollection.Count;
+            foreach (Counter counter in countersToRemove)
+            {
+                int counterIndex = preset.CounterCollection.IndexOf(counter);
+                if (counterIndex >= 0 && counterIndex < index)
+                {
+                    index = counterIndex;
+                }
+            }
+            foreach (Counter counter in countersToRemove)
+            {
+                preset.CounterCollection.Remove(counter);
+            }
+            if (preset.CounterCollection.Count > 0)
+            {
+                preset.SelectedCounter = preset.CounterCollection[Math.Min(index, preset.CounterCollection.Count - 1)];
             }
         }
 
@@ -704,7 +742,41 @@ namespace DCSB.ViewModels
         }
         private void RemoveSound()
         {
-            _configurationModel.SelectedPreset.SoundCollection.Remove(_configurationModel.SelectedPreset.SelectedSound);
+            Preset preset = _configurationModel.SelectedPreset;
+            List<Sound> soundsToRemove = new List<Sound>();
+            if (SelectedSounds != null && SelectedSounds.Count > 0)
+            {
+                foreach (object item in SelectedSounds)
+                {
+                    soundsToRemove.Add((Sound)item);
+                }
+            }
+            else if (preset.SelectedSound != null)
+            {
+                soundsToRemove.Add(preset.SelectedSound);
+            }
+            if (soundsToRemove.Count == 0)
+            {
+                return;
+            }
+
+            int index = preset.SoundCollection.Count;
+            foreach (Sound sound in soundsToRemove)
+            {
+                int soundIndex = preset.SoundCollection.IndexOf(sound);
+                if (soundIndex >= 0 && soundIndex < index)
+                {
+                    index = soundIndex;
+                }
+            }
+            foreach (Sound sound in soundsToRemove)
+            {
+                preset.SoundCollection.Remove(sound);
+            }
+            if (preset.SoundCollection.Count > 0)
+            {
+                preset.SelectedSound = preset.SoundCollection[Math.Min(index, preset.SoundCollection.Count - 1)];
+            }
         }
 
         public ICommand PlayCommand
