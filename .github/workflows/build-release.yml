@@ -111,7 +111,7 @@ jobs:
           path: Installers/DCSB_*.exe
 
       - name: Create release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -120,10 +120,10 @@ jobs:
           generate_release_notes: true
 
       - name: VirusTotal scan and append report to release (optional)
-        if: ${{ secrets.VIRUSTOTAL_API_KEY }} && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        if: ${{ secrets.VIRUSTOTAL_API_KEY && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true' }}
         uses: actions/checkout@v4
       - name: Run VirusTotal scan and update release body
-        if: ${{ secrets.VIRUSTOTAL_API_KEY }} && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        if: ${{ secrets.VIRUSTOTAL_API_KEY && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true' }}
         shell: pwsh
         env:
           VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
