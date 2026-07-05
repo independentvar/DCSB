@@ -11,6 +11,7 @@ namespace DCSB
     public partial class MainWindow : Window
     {
         NotifyIcon notifyIcon;
+        OverlayManager overlayManager;
 
         public MainWindow()
         {
@@ -71,6 +72,9 @@ namespace DCSB
             if (notifyIcon != null)
                 notifyIcon.Dispose();
 
+            if (overlayManager != null)
+                overlayManager.Dispose();
+
             if (DataContext is ViewModel viewModel)
                 viewModel.Dispose();
 
@@ -88,6 +92,8 @@ namespace DCSB
                 IntPtr handle = new WindowInteropHelper(this).Handle;
                 viewModel.WindowHandle = handle;
                 HwndSource.FromHwnd(handle)?.AddHook(WndProc);
+
+                overlayManager = new OverlayManager(viewModel);
             }
         }
 

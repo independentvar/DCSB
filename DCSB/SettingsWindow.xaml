@@ -24,6 +24,10 @@
             <Views:PresetConfigurationView DataContext="{Binding PresetConfigurationViewModel}" />
         </TabItem>
 
+        <TabItem Header="Overlay">
+            <Views:OverlayView />
+        </TabItem>
+
         <TabItem Header="Other">
             <Views:OtherView />
         </TabItem>

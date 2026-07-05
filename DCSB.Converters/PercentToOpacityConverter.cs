@@ -1,21 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Globalization;
-using System.Linq;
 using System.Windows.Data;
-using DCSB.Utils;
 
 namespace DCSB.Converters
 {
-    public class VKeysToStringConverter : IValueConverter
+    public class PercentToOpacityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is IList<VKey> keys)
+            if (value is int percent)
             {
-                return string.Join(" + ", keys.Select(key => key.ToDisplayString()));
+                return percent / 100.0;
             }
-            return null;
+            return 1.0;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

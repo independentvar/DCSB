@@ -149,6 +149,28 @@ namespace DCSB.Models
             }
         }
 
+        private bool _overlayEnabled;
+        public bool OverlayEnabled
+        {
+            get { return _overlayEnabled; }
+            set
+            {
+                _overlayEnabled = value;
+                OnPropertyChanged("OverlayEnabled");
+            }
+        }
+
+        private int _overlayOpacity;
+        public int OverlayOpacity
+        {
+            get { return _overlayOpacity; }
+            set
+            {
+                _overlayOpacity = value;
+                OnPropertyChanged("OverlayOpacity");
+            }
+        }
+
         private DisplayOption _enable;
         public DisplayOption Enable
         {
@@ -227,6 +249,8 @@ namespace DCSB.Models
             SoundShortcuts.PropertyChanged += (sender, e) => OnPropertyChanged("SoundShortcuts");
 
             AutoAssignKeys = true;
+            OverlayEnabled = true;
+            OverlayOpacity = 100;
             Volume = 100;
             PrimaryDeviceVolume = 100;
             SecondaryDeviceVolume = 100;
