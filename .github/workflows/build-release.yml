@@ -21,9 +21,7 @@ jobs:
   build:
     # Skip the duplicate pull_request run for PRs from branches in this repo;
     # those are already built by the push trigger. PRs from forks still build.
-    # TEMPORARY: also let the dev/antivirus-vt-scan PR run so the VirusTotal
-    # step can be exercised end-to-end from a PR build; revert once verified.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.head_ref == 'dev/antivirus-vt-scan'
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: windows-latest
 
     steps:
@@ -113,9 +111,7 @@ jobs:
           path: Installers/DCSB_*.exe
 
       - name: Create release
-        # TEMPORARY: the pull_request OR-clause lets this run on the
-        # dev/antivirus-vt-scan PR for testing; revert once VT is verified.
-        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true') || (github.event_name == 'pull_request' && github.head_ref == 'dev/antivirus-vt-scan')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -133,9 +129,7 @@ jobs:
           "has_key=$has" >> $env:GITHUB_OUTPUT
 
       - name: Run VirusTotal scan and update release body
-        # TEMPORARY: the pull_request OR-clause lets this run on the
-        # dev/antivirus-vt-scan PR for testing; revert once VT is verified.
-        if: steps.vt_check.outputs.has_key == 'true' && ((github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true') || (github.event_name == 'pull_request' && github.head_ref == 'dev/antivirus-vt-scan'))
+        if: steps.vt_check.outputs.has_key == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
         shell: pwsh
         env:
           VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
@@ -186,7 +180,7 @@ jobs:
 
           $reportMd = "## Antivirus report (VirusTotal)`n`n"
           if ($malicious -le $threshold) {
-            $reportMd += "Detected: **$malicious / $total** engines. A small number of machine-learning/heuristic detections is expected for an unsigned installer and does not indicate an infection.`n`n"
+            $reportMd += "Detected: **$malicious / $total** engines. This is a known false alarm, not a virus. Small free apps like this one aren't signed with a paid certificate, and some scanners automatically distrust any installer that isn't signed — even when it's completely safe. You can review the detailed results at the link below.`n`n"
           } else {
             $reportMd += ":warning: Detected: **$malicious / $total** engines — higher than expected for an unsigned installer. Review the full report before trusting this build.`n`n"
           }
