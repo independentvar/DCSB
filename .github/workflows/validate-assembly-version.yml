@@ -31,11 +31,13 @@ jobs:
             exit 0
           fi
 
-          # Ignore changes that are only tests, docs, or CI config
-          FILTERED=$(echo "$CHANGED" | grep -vE '^(DCSB.Tests/|DCSB.UITests/|\.github/|docs/|README.md)' || true)
+          # Ignore changes that don't affect the shipped app: tests, docs, CI
+          # config, installer tooling, and the repo-root .gitignore. The installer
+          # scripts build the package but don't change the app binaries themselves.
+          FILTERED=$(echo "$CHANGED" | grep -vE '^(DCSB.Tests/|DCSB.UITests/|\.github/|Installer scripts/|docs/|README.md|\.gitignore$)' || true)
 
           if [ -z "$FILTERED" ]; then
-            echo "Only test/docs/CI files changed — no version bump required"
+            echo "Only test/docs/CI/installer files changed — no version bump required"
             exit 0
           fi
 
