@@ -85,8 +85,20 @@ namespace DCSB
         {
             if (DataContext is ViewModel viewModel)
             {
-                viewModel.WindowHandle = new WindowInteropHelper(this).Handle;
+                IntPtr handle = new WindowInteropHelper(this).Handle;
+                viewModel.WindowHandle = handle;
+                HwndSource.FromHwnd(handle)?.AddHook(WndProc);
             }
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == App.ShowExistingInstanceMessage)
+            {
+                Open();
+                handled = true;
+            }
+            return IntPtr.Zero;
         }
 
         private void Open()
