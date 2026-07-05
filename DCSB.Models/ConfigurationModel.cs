@@ -127,6 +127,28 @@ namespace DCSB.Models
             }
         }
 
+        private bool _autoAssignKeys;
+        public bool AutoAssignKeys
+        {
+            get { return _autoAssignKeys; }
+            set
+            {
+                _autoAssignKeys = value;
+                OnPropertyChanged("AutoAssignKeys");
+            }
+        }
+
+        private AutoAssignKeySet _autoAssignKeySet;
+        public AutoAssignKeySet AutoAssignKeySet
+        {
+            get { return _autoAssignKeySet; }
+            set
+            {
+                _autoAssignKeySet = value;
+                OnPropertyChanged("AutoAssignKeySet");
+            }
+        }
+
         private DisplayOption _enable;
         public DisplayOption Enable
         {
@@ -204,6 +226,7 @@ namespace DCSB.Models
             CounterShortcuts.PropertyChanged += (sender, e) => OnPropertyChanged("CounterShortcuts");
             SoundShortcuts.PropertyChanged += (sender, e) => OnPropertyChanged("SoundShortcuts");
 
+            AutoAssignKeys = true;
             Volume = 100;
             PrimaryDeviceVolume = 100;
             SecondaryDeviceVolume = 100;

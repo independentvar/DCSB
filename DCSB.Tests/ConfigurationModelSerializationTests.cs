@@ -54,6 +54,39 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesAutoAssignSettings()
+        {
+            ConfigurationModel model = new ConfigurationModel
+            {
+                AutoAssignKeys = false,
+                AutoAssignKeySet = AutoAssignKeySet.Numpad
+            };
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.IsFalse(loaded.AutoAssignKeys);
+            Assert.AreEqual(AutoAssignKeySet.Numpad, loaded.AutoAssignKeySet);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutAutoAssignElements_UsesDefaults()
+        {
+            // configs written by older versions have no auto-assign elements;
+            // they must load with the feature enabled on the number row
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.AreEqual(80, loaded.Volume);
+            Assert.IsTrue(loaded.AutoAssignKeys);
+            Assert.AreEqual(AutoAssignKeySet.NumberRow, loaded.AutoAssignKeySet);
+        }
+
+        [TestMethod]
         public void RoundTrip_DoesNotSerializeXmlIgnoredSelectedPreset()
         {
             ConfigurationModel model = new ConfigurationModel();

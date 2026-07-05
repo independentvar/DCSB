@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DCSB.Views.SettingsWindow"
+             xmlns:Utils="clr-namespace:DCSB.Utils;assembly=DCSB.Utils"
+             xmlns:Controls="clr-namespace:DCSB.Controls;assembly=DCSB.Controls"
              xmlns:Converters="clr-namespace:DCSB.Converters;assembly=DCSB.Converters"
              xmlns:Interactivity="clr-namespace:DCSB.Interactivity;assembly=DCSB.Interactivity"
              mc:Ignorable="d" 
@@ -110,6 +112,18 @@
                     <Button Grid.Row="2" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
                             CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Stop}">...</Button>
                 </Grid>
+            </GroupBox>
+
+            <GroupBox Header="New Sounds">
+                <StackPanel>
+                    <CheckBox Margin="2" IsChecked="{Binding ConfigurationModel.AutoAssignKeys}">Automatically assign keys to new sounds</CheckBox>
+                    <Controls:RadioButtonList SelectedValue="{Binding ConfigurationModel.AutoAssignKeySet}"
+                                              SelectedValuePath="Tag"
+                                              IsEnabled="{Binding ConfigurationModel.AutoAssignKeys}">
+                        <ListBoxItem Tag="{x:Static Utils:AutoAssignKeySet.NumberRow}">Number row (1-0)</ListBoxItem>
+                        <ListBoxItem Tag="{x:Static Utils:AutoAssignKeySet.Numpad}">Numpad (1-0)</ListBoxItem>
+                    </Controls:RadioButtonList>
+                </StackPanel>
             </GroupBox>
         </StackPanel>
     </ScrollViewer>
