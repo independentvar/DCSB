@@ -21,7 +21,7 @@ function Initialize-UITestContext {
 
     # the app's own assemblies give us schema-correct config serialization and
     # WASAPI device access without duplicating any of that logic in the tests
-    foreach ($dll in 'CommonServiceLocator.dll', 'GalaSoft.MvvmLight.dll', 'DCSB.Utils.dll', 'DCSB.Models.dll', 'NAudio.dll') {
+    foreach ($dll in 'CommunityToolkit.Mvvm.dll', 'DCSB.Utils.dll', 'DCSB.Models.dll', 'NAudio.Core.dll', 'NAudio.Wasapi.dll') {
         $path = Join-Path $script:BinDir $dll
         if (Test-Path $path) { Add-Type -Path $path }
     }
