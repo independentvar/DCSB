@@ -1,8 +1,12 @@
 <Project>
   <PropertyGroup>
-    <!-- All projects target a single framework (net481). Keep the pre-SDK output
+    <!-- All projects target a single framework (net10.0-windows). Keep a flat output
          layout (bin\<Config>\ with no TFM subfolder) so the NSIS installer and the
          CI workflow can reference bin\Release\ paths unchanged. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- The app is Windows-only by design (WPF/WinForms/Win32). CA1416 flags every
+         Windows-only API call for cross-platform portability we will never need, so
+         suppress it repo-wide to keep genuine warnings visible. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
 </Project>

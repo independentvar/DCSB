@@ -57,35 +57,24 @@ jobs:
           "only_tests=$onlyTests" >> $env:GITHUB_OUTPUT
           Write-Host "Test-only change: $onlyTests"
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
-      - name: Restore NuGet packages
-        run: msbuild DCSB.sln -t:restore
-
-      # The projects target .NET Framework 4.8.1, whose targeting pack is not
-      # installed on GitHub runners. Install the reference assemblies from NuGet
-      # into the standard targeting-pack location so MSBuild resolves them
-      # (including the Facades folder) like a normal targeting pack.
-      - name: Install .NET Framework 4.8.1 reference assemblies
-        shell: pwsh
-        run: |
-          nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version 1.0.3 -OutputDirectory refpacks
-          $source = "refpacks\Microsoft.NETFramework.ReferenceAssemblies.net481.1.0.3\build\.NETFramework\v4.8.1"
-          $target = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8.1"
-          New-Item -ItemType Directory -Force $target | Out-Null
-          Copy-Item "$source\*" $target -Recurse -Force
+      - name: Restore
+        run: dotnet restore DCSB.sln
 
       - name: Build
-        run: msbuild DCSB.sln /p:Configuration=Release /m /verbosity:minimal
+        run: dotnet build DCSB.sln -c Release --no-restore
 
+      # DCSB.Tests runs under Microsoft.Testing.Platform (EnableMSTestRunner),
+      # so the built test project is a self-launching executable whose exit code
+      # reflects the result. Run it directly for reliable, visible output.
       - name: Run tests
         shell: pwsh
         run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vstest = & $vswhere -latest -products * -find 'Common7\IDE\Extensions\TestPlatform\vstest.console.exe' | Select-Object -First 1
-          if (-not $vstest) { throw "vstest.console.exe not found" }
-          & $vstest "DCSB.Tests\bin\Release\DCSB.Tests.dll" /TestAdapterPath:"DCSB.Tests\bin\Release" /logger:trx
+          & "DCSB.Tests\bin\Release\DCSB.Tests.exe"
           exit $LASTEXITCODE
 
       - name: Read version from built executable
