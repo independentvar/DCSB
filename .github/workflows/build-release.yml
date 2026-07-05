@@ -118,3 +118,86 @@ jobs:
           name: DCSB ${{ steps.version.outputs.version }}
           files: Installers/DCSB_*.exe
           generate_release_notes: true
+
+      - name: Check VirusTotal secret
+        id: vt_check
+        shell: pwsh
+        env:
+          VT_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          $has = if ($env:VT_KEY) { "true" } else { "false" }
+          "has_key=$has" >> $env:GITHUB_OUTPUT
+
+      - name: Run VirusTotal scan and update release body
+        if: steps.vt_check.outputs.has_key == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        shell: pwsh
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Find the installer produced earlier
+          $installer = Get-ChildItem "Installers\DCSB_*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installer) {
+            Write-Host "Installer not found, skipping VirusTotal scan"
+            exit 0
+          }
+          $path = $installer.FullName
+          Write-Host "Uploading $path to VirusTotal..."
+
+          $uploadResp = curl -s -X POST "https://www.virustotal.com/api/v3/files" -H "x-apikey: $env:VIRUSTOTAL_API_KEY" -F "file=@$path"
+          if (-not $uploadResp) { Write-Host "No response from VirusTotal"; exit 0 }
+          try { $uploadJson = $uploadResp | ConvertFrom-Json } catch { Write-Host "Failed to parse upload response"; exit 0 }
+          $analysisId = $uploadJson.data.id
+          if (-not $analysisId) { Write-Host "No analysis id returned, skipping"; exit 0 }
+
+          # Poll analysis status
+          $status = ""
+          for ($i=0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 5
+            $statusResp = curl -s -H "x-apikey: $env:VIRUSTOTAL_API_KEY" "https://www.virustotal.com/api/v3/analyses/$analysisId"
+            if (-not $statusResp) { continue }
+            try { $statusJson = $statusResp | ConvertFrom-Json } catch { continue }
+            $status = $statusJson.data.attributes.status
+            Write-Host "Analysis status: $status"
+            if ($status -eq 'completed') { break }
+          }
+
+          if ($status -ne 'completed') { Write-Host "Analysis did not complete in time, skipping report"; exit 0 }
+
+          # Extract file SHA256 and stats
+          $sha256 = $statusJson.meta.file_info.sha256
+          $stats = $statusJson.data.attributes.stats
+          if (-not $sha256 -or -not $stats) { Write-Host "Missing report data"; exit 0 }
+          $total = ($stats.PSObject.Properties | ForEach-Object { $_.Value } | Measure-Object -Sum).Sum
+          $malicious = ($stats.malicious) -as [int]
+
+          # Detections at or below this count are treated as expected
+          # false positives (unsigned NSIS installers reliably trip a few
+          # ML/heuristic engines). Above it, surface a warning instead.
+          $threshold = 5
+          $reportUrl = "https://www.virustotal.com/gui/file/$sha256/detection"
+
+          $reportMd = "## Antivirus report (VirusTotal)`n`n"
+          if ($malicious -le $threshold) {
+            $reportMd += "Detected: **$malicious / $total** engines. This is a known false alarm, not a virus. Small free apps like this one aren't signed with a paid certificate, and some scanners automatically distrust any installer that isn't signed — even when it's completely safe. You can review the detailed results at the link below.`n`n"
+          } else {
+            $reportMd += ":warning: Detected: **$malicious / $total** engines — higher than expected for an unsigned installer. Review the full report before trusting this build.`n`n"
+          }
+          $reportMd += "[Full VirusTotal report]($reportUrl)`n"
+
+          # Fetch current release body
+          $tag = "v$env:VERSION"
+          Write-Host "Updating release $tag with VirusTotal report..."
+          $current = gh release view $tag --json body -q .body 2>$null
+          if ($LASTEXITCODE -ne 0) { Write-Host "Failed to read release body, skipping"; exit 0 }
+
+          # Strip any previously appended antivirus report so re-runs replace
+          # rather than accumulate it (the report is always appended last).
+          $current = [regex]::Replace($current, '(?s)\s*## Antivirus report \(VirusTotal\).*$', '')
+          $newBody = $current.TrimEnd() + "`n`n" + $reportMd
+
+          # Write via a file so multi-line markdown keeps its newlines.
+          $bodyFile = Join-Path $env:RUNNER_TEMP "release-body.md"
+          Set-Content -Path $bodyFile -Value $newBody -Encoding UTF8
+          gh release edit $tag --notes-file $bodyFile
