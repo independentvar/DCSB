@@ -7,6 +7,8 @@
 [Ii]nstallers/*.exe
 # Installer-script output
 App-Version.txt
+Files-Install.nsi
+Files-Uninstall.nsi
 
 # User-specific files
 *.suo
