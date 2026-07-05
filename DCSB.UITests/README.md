@@ -42,6 +42,8 @@ machine).
 | `Test-DeviceDropdownFullNames` | Settings → Sound dropdowns list `Disabled`, `Default Output Device`, and every active render endpoint with its full untruncated name. |
 | `Test-LiveDeviceSwitch` | Switching the first output device at runtime (disposes and recreates the playback engine) doesn't crash, and playback works after switching back. |
 | `Test-AddSoundNamePrefill` | Selecting file/s in the Sound dialog prefills an empty Name with the first file's name (without extension); a later selection doesn't overwrite an already-set name. |
+| `Test-SoundDialogSingleClick` | A single left-click on the Sound dialog's read-only File/s box opens the file picker, and a single click on the Key/s box opens the key-binding window (both previously needed a double-click). The Key/s box must open on button *release* (like the `...` button), so the opening click isn't captured by the global mouse hook as a "Left Click" binding. |
+| `Test-CounterDialogSingleClick` | A single left-click on the Counter dialog's read-only File box opens the file picker (previously needed a double-click). |
 | `Test-AddCounterNamePrefill` | Same prefill behavior for the Counter dialog's file picker. |
 | `Test-AutoAssignKeys` | New sounds get the first free auto-assigned key (`KEY_1` by default); switching Settings → Shortcuts to the numpad key set makes the next sound get `NUMPAD1`; unchecking the feature stops assignment. Verified in the saved `config.xml`. |
 | `Test-SingleInstance` | Launching a second `DCSB.exe` exits it (single-instance mutex) and restores the minimized window of the already-running instance. |
