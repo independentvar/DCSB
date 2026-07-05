@@ -147,7 +147,8 @@ namespace DCSB.Business
                 Directory.CreateDirectory(directoryPath);
             }
 
-            File.Create(filePath, 1, FileOptions.None, security).Close();
+            FileInfo fileInfo = new FileInfo(filePath);
+            fileInfo.Create(FileMode.Create, FileSystemRights.FullControl, FileShare.None, 1, FileOptions.None, security).Close();
         }
 
         private void MoveCorruptedConfig(string filePath)

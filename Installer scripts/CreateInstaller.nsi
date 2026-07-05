@@ -47,6 +47,36 @@ Function LaunchApplication
 	Exec '"$WINDIR\explorer.exe" "$INSTDIR\DCSB.exe"'
 FunctionEnd
 
+# The app is framework-dependent: it needs the .NET 10 Desktop Runtime
+# (Microsoft.WindowsDesktop.App) installed. Detect it by looking for a 10.x
+# runtime folder under the shared framework directory; if it's missing, offer
+# to open the download page. The user can still proceed (the .NET apphost shows
+# its own prompt on first launch), but this catches it up front.
+!define DOTNET_DOWNLOAD_URL "https://dotnet.microsoft.com/download/dotnet/10.0/runtime?cid=getdotnetcore&runtime=desktop"
+
+Function CheckDotNetRuntime
+	StrCpy $R1 "0"
+	FindFirst $R0 $R2 "$PROGRAMFILES64\dotnet\shared\Microsoft.WindowsDesktop.App\10.*"
+	loop:
+		StrCmp $R2 "" done
+		StrCpy $R1 "1"          # found at least one 10.x runtime folder
+		FindNext $R0 $R2
+		Goto loop
+	done:
+	FindClose $R0
+
+	StrCmp $R1 "1" runtimeOk
+		MessageBox MB_YESNO|MB_ICONEXCLAMATION \
+			"Deathcounter and Soundboard needs the Microsoft .NET 10 Desktop Runtime (x64), which does not appear to be installed.$\n$\nOpen the download page now?$\n$\n(Choose No to continue installing anyway - the app will prompt you again on first launch.)" \
+			IDNO runtimeOk
+			ExecShell "open" "${DOTNET_DOWNLOAD_URL}"
+	runtimeOk:
+FunctionEnd
+
+Function .onInit
+	Call CheckDotNetRuntime
+FunctionEnd
+
 # main section: the application itself (required, cannot be deselected)
 Section "Deathcounter and Soundboard (required)" SecApp
     SectionIn RO

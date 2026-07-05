@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net481</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <!-- DCSB.Converters exposes IValueConverter types, which need the WPF assemblies -->
     <UseWPF>true</UseWPF>
+    <!-- MSTest 4 on .NET runs under Microsoft.Testing.Platform; produce a test exe -->
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

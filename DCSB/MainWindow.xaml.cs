@@ -27,15 +27,18 @@ namespace DCSB
                 icon = new Icon(stream);
             }
 
-            MenuItem open = new MenuItem("Open", (sender, e) => Open());
-            MenuItem exit = new MenuItem("Exit", (sender, e) => Close());
+            ToolStripMenuItem open = new ToolStripMenuItem("Open", null, (sender, e) => Open());
+            ToolStripMenuItem exit = new ToolStripMenuItem("Exit", null, (sender, e) => Close());
+
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            contextMenu.Items.AddRange(new ToolStripItem[] { open, exit });
 
             notifyIcon = new NotifyIcon
             {
                 Icon = icon,
                 Text = "Deathcounter and Soundboard",
                 Visible = true,
-                ContextMenu = new ContextMenu(new MenuItem[] { open, exit })
+                ContextMenuStrip = contextMenu
             };
 
             notifyIcon.Click += (sender, args) => Open();

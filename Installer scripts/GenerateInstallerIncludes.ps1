@@ -21,9 +21,11 @@ Set-Content -Path (Join-Path $PSScriptRoot 'App-Version.txt') `
     -Value "!define Version `"$version`"" -Encoding ASCII
 
 # --- File lists: ship exactly what the app needs to run (assemblies, exe, config) ---
-# (No .pdb / .xml doc files - matches the previous hand-maintained list.)
+# On .NET the apphost (DCSB.exe) also needs DCSB.deps.json and
+# DCSB.runtimeconfig.json next to it to locate the shared runtime - ship the
+# .json files too. (Still no .pdb / .xml doc files.)
 $files = Get-ChildItem -Path $buildDir -File |
-    Where-Object { $_.Extension -in '.dll', '.exe', '.config' } |
+    Where-Object { $_.Extension -in '.dll', '.exe', '.config', '.json' } |
     Sort-Object Name          # sorted => stable, reviewable diffs
 
 if (-not $files) {
