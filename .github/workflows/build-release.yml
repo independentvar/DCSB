@@ -21,7 +21,9 @@ jobs:
   build:
     # Skip the duplicate pull_request run for PRs from branches in this repo;
     # those are already built by the push trigger. PRs from forks still build.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    # TEMPORARY: also let the dev/antivirus-vt-scan PR run so the VirusTotal
+    # step can be exercised end-to-end from a PR build; revert once verified.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.head_ref == 'dev/antivirus-vt-scan'
     runs-on: windows-latest
 
     steps:
@@ -111,7 +113,9 @@ jobs:
           path: Installers/DCSB_*.exe
 
       - name: Create release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true'
+        # TEMPORARY: the pull_request OR-clause lets this run on the
+        # dev/antivirus-vt-scan PR for testing; revert once VT is verified.
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true') || (github.event_name == 'pull_request' && github.head_ref == 'dev/antivirus-vt-scan')
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -129,7 +133,9 @@ jobs:
           "has_key=$has" >> $env:GITHUB_OUTPUT
 
       - name: Run VirusTotal scan and update release body
-        if: steps.vt_check.outputs.has_key == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true'
+        # TEMPORARY: the pull_request OR-clause lets this run on the
+        # dev/antivirus-vt-scan PR for testing; revert once VT is verified.
+        if: steps.vt_check.outputs.has_key == 'true' && ((github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev/antivirus-vt-scan') && steps.changes.outputs.only_tests != 'true') || (github.event_name == 'pull_request' && github.head_ref == 'dev/antivirus-vt-scan'))
         shell: pwsh
         env:
           VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
