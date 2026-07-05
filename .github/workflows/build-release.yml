@@ -178,16 +178,32 @@ jobs:
           $total = ($stats.PSObject.Properties | ForEach-Object { $_.Value } | Measure-Object -Sum).Sum
           $malicious = ($stats.malicious) -as [int]
 
-          $reportMd = "## Antivirus report (VirusTotal)`n`n"
-          $reportMd += "Detected: **$malicious / $total** engines.`n`n"
-          $reportMd += "[Full VirusTotal report](https://www.virustotal.com/gui/file/$sha256/detection)`n"
+          # Detections at or below this count are treated as expected
+          # false positives (unsigned NSIS installers reliably trip a few
+          # ML/heuristic engines). Above it, surface a warning instead.
+          $threshold = 5
+          $reportUrl = "https://www.virustotal.com/gui/file/$sha256/detection"
 
-          # Fetch current release body and append report
+          $reportMd = "## Antivirus report (VirusTotal)`n`n"
+          if ($malicious -le $threshold) {
+            $reportMd += "Detected: **$malicious / $total** engines. A small number of machine-learning/heuristic detections is expected for an unsigned installer and does not indicate an infection.`n`n"
+          } else {
+            $reportMd += ":warning: Detected: **$malicious / $total** engines — higher than expected for an unsigned installer. Review the full report before trusting this build.`n`n"
+          }
+          $reportMd += "[Full VirusTotal report]($reportUrl)`n"
+
+          # Fetch current release body
           $tag = "v$env:VERSION"
           Write-Host "Updating release $tag with VirusTotal report..."
           $current = gh release view $tag --json body -q .body 2>$null
           if ($LASTEXITCODE -ne 0) { Write-Host "Failed to read release body, skipping"; exit 0 }
 
-          $newBody = $current + "`n`n" + $reportMd
+          # Strip any previously appended antivirus report so re-runs replace
+          # rather than accumulate it (the report is always appended last).
+          $current = [regex]::Replace($current, '(?s)\s*## Antivirus report \(VirusTotal\).*$', '')
+          $newBody = $current.TrimEnd() + "`n`n" + $reportMd
 
-          gh release edit $tag --notes "$newBody"
+          # Write via a file so multi-line markdown keeps its newlines.
+          $bodyFile = Join-Path $env:RUNNER_TEMP "release-body.md"
+          Set-Content -Path $bodyFile -Value $newBody -Encoding UTF8
+          gh release edit $tag --notes-file $bodyFile
