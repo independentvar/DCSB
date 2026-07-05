@@ -178,7 +178,11 @@ jobs:
           # Fetch current release body
           $tag = "v$env:VERSION"
           Write-Host "Updating release $tag with VirusTotal report..."
-          $current = gh release view $tag --json body -q .body 2>$null
+          # Capture as a single string. Native command output is returned as a
+          # string[] (one element per line); joining with "`n" preserves the
+          # body's newlines. Without this, the later regex/TrimEnd string
+          # coercion joins the array with spaces and flattens it to one line.
+          $current = (gh release view $tag --json body -q .body 2>$null) -join "`n"
           if ($LASTEXITCODE -ne 0) { Write-Host "Failed to read release body, skipping"; exit 0 }
 
           # Strip any previously appended antivirus report so re-runs replace
