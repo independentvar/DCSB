@@ -24,7 +24,11 @@
 	!insertmacro MUI_PAGE_INSTFILES
 		# These indented statements modify settings for MUI_PAGE_FINISH
 		!define MUI_FINISHPAGE_NOAUTOCLOSE
-		!define MUI_FINISHPAGE_RUN "$INSTDIR\DCSB.exe"
+		# launch via explorer.exe so the app starts non-elevated; running it
+		# directly would inherit the installer's admin token and UIPI would
+		# block drag and drop from (non-elevated) Explorer into the app
+		!define MUI_FINISHPAGE_RUN
+		!define MUI_FINISHPAGE_RUN_FUNCTION LaunchApplication
 		!define MUI_FINISHPAGE_RUN_CHECKED
 		!define MUI_FINISHPAGE_RUN_TEXT "Start Deathcounter and Soundboard"
 	!insertmacro MUI_PAGE_FINISH
@@ -37,6 +41,11 @@
  
 # language
 	!insertmacro MUI_LANGUAGE "English"
+
+# start the app de-elevated by asking the shell (explorer) to launch it
+Function LaunchApplication
+	Exec '"$WINDIR\explorer.exe" "$INSTDIR\DCSB.exe"'
+FunctionEnd
 
 # main section: the application itself (required, cannot be deselected)
 Section "Deathcounter and Soundboard (required)" SecApp
