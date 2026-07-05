@@ -178,13 +178,9 @@ jobs:
           $total = ($stats.PSObject.Properties | ForEach-Object { $_.Value } | Measure-Object -Sum).Sum
           $malicious = ($stats.malicious) -as [int]
 
-          $reportMd = @"
-## Antivirus report (VirusTotal)
-
-Detected: **$malicious / $total** engines.
-
-[Full VirusTotal report](https://www.virustotal.com/gui/file/$sha256/detection)
-"@
+          $reportMd = "## Antivirus report (VirusTotal)`n`n"
+          $reportMd += "Detected: **$malicious / $total** engines.`n`n"
+          $reportMd += "[Full VirusTotal report](https://www.virustotal.com/gui/file/$sha256/detection)`n"
 
           # Fetch current release body and append report
           $tag = "v$env:VERSION"
