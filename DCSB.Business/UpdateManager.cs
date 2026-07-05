@@ -2,7 +2,7 @@ using Octokit;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,12 +14,6 @@ namespace DCSB.Business
         private const string owner = "independentvar";
         private const string repositoryName = "DCSB";
         private const string releasesUrl = "https://github.com/independentvar/DCSB/releases";
-
-        static UpdateManager()
-        {
-            // GitHub requires TLS 1.2, which .NET 4.5.2 does not enable by default
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-        }
 
         public async Task AutoUpdateCheck(Version currentVersion)
         {
@@ -114,10 +108,14 @@ namespace DCSB.Business
             }
 
             string installerPath = Path.Combine(Path.GetTempPath(), installerAsset.Name);
-            using (WebClient client = new WebClient())
+            using (HttpClient client = new HttpClient())
             {
-                client.Headers.Add(HttpRequestHeader.UserAgent, "independentvar-DCSB");
-                await client.DownloadFileTaskAsync(installerAsset.BrowserDownloadUrl, installerPath);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("independentvar-DCSB");
+                using (Stream downloadStream = await client.GetStreamAsync(installerAsset.BrowserDownloadUrl))
+                using (FileStream fileStream = File.Create(installerPath))
+                {
+                    await downloadStream.CopyToAsync(fileStream);
+                }
             }
             return installerPath;
         }
