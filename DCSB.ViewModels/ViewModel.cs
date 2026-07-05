@@ -10,6 +10,7 @@ using DCSB.Input;
 using DCSB.Models;
 using DCSB.Utils;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Security.Principal;
 using System.Diagnostics;
@@ -709,10 +710,83 @@ namespace DCSB.ViewModels
         private void AddSound()
         {
             Sound sound = new Sound();
+            AssignNextAvailableKeys(sound);
             _configurationModel.SelectedPreset.SelectedSound = sound;
             _configurationModel.SelectedPreset.SoundCollection.Add(sound);
             _applicationStateModel.ModifiedSound = sound;
             _applicationStateModel.SoundOpened = true;
+        }
+
+        private static readonly VKey[] _autoAssignNumberRowKeys =
+        {
+            VKey.KEY_1, VKey.KEY_2, VKey.KEY_3, VKey.KEY_4, VKey.KEY_5,
+            VKey.KEY_6, VKey.KEY_7, VKey.KEY_8, VKey.KEY_9, VKey.KEY_0
+        };
+        private static readonly VKey[] _autoAssignNumpadKeys =
+        {
+            VKey.NUMPAD1, VKey.NUMPAD2, VKey.NUMPAD3, VKey.NUMPAD4, VKey.NUMPAD5,
+            VKey.NUMPAD6, VKey.NUMPAD7, VKey.NUMPAD8, VKey.NUMPAD9, VKey.NUMPAD0
+        };
+        private static readonly VKey[][] _autoAssignModifierLevels =
+        {
+            new VKey[0], new[] { VKey.SHIFT }, new[] { VKey.CAPITAL }, new[] { VKey.TAB }
+        };
+
+        private void AssignNextAvailableKeys(Sound sound)
+        {
+            if (!_configurationModel.AutoAssignKeys)
+            {
+                return;
+            }
+
+            VKey[] keys = _configurationModel.AutoAssignKeySet == AutoAssignKeySet.Numpad
+                ? _autoAssignNumpadKeys
+                : _autoAssignNumberRowKeys;
+            foreach (VKey[] modifiers in _autoAssignModifierLevels)
+            {
+                foreach (VKey key in keys)
+                {
+                    if (!IsComboTaken(modifiers, key))
+                    {
+                        foreach (VKey modifier in modifiers)
+                        {
+                            sound.Keys.Add(modifier);
+                        }
+                        sound.Keys.Add(key);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private bool IsComboTaken(VKey[] modifiers, VKey key)
+        {
+            bool takenBySound = _configurationModel.SelectedPreset.SoundCollection.Any(s =>
+                s.Keys.Count == modifiers.Length + 1 &&
+                s.Keys.Contains(key) &&
+                modifiers.All(modifier => s.Keys.Contains(modifier)));
+            if (takenBySound)
+            {
+                return true;
+            }
+
+            // counter/sound shortcuts and preset bindings fire whenever their keys are a
+            // subset of the pressed keys, so any such combination would trigger them too
+            IEnumerable<IBindable> reserved = new IBindable[]
+            {
+                _configurationModel.CounterShortcuts.Next,
+                _configurationModel.CounterShortcuts.Previous,
+                _configurationModel.CounterShortcuts.Increment,
+                _configurationModel.CounterShortcuts.Decrement,
+                _configurationModel.CounterShortcuts.Reset,
+                _configurationModel.SoundShortcuts.Pause,
+                _configurationModel.SoundShortcuts.Continue,
+                _configurationModel.SoundShortcuts.Stop
+            }.Concat(_configurationModel.PresetCollection);
+
+            return reserved.Any(bindable =>
+                bindable.Keys.Count > 0 &&
+                bindable.Keys.All(k => k == key || modifiers.Contains(k)));
         }
 
         private static readonly string[] _supportedSoundExtensions = { ".wma", ".mp3", ".wav", ".ogg", ".m4a", ".aiff", ".flac" };
@@ -731,6 +805,7 @@ namespace DCSB.ViewModels
                 }
                 Sound sound = new Sound() { Name = Path.GetFileNameWithoutExtension(file) };
                 sound.Files.Add(file);
+                AssignNextAvailableKeys(sound);
                 _configurationModel.SelectedPreset.SoundCollection.Add(sound);
                 _configurationModel.SelectedPreset.SelectedSound = sound;
             }
