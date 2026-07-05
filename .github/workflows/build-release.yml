@@ -118,3 +118,64 @@ jobs:
           name: DCSB ${{ steps.version.outputs.version }}
           files: Installers/DCSB_*.exe
           generate_release_notes: true
+
+      - name: VirusTotal scan and append report to release (optional)
+        if: ${{ secrets.VIRUSTOTAL_API_KEY }} && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        uses: actions/checkout@v4
+      - name: Run VirusTotal scan and update release body
+        if: ${{ secrets.VIRUSTOTAL_API_KEY }} && github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && steps.changes.outputs.only_tests != 'true'
+        shell: pwsh
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Find the installer produced earlier
+          $installer = Get-ChildItem "Installers\DCSB_*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installer) {
+            Write-Host "Installer not found, skipping VirusTotal scan"
+            exit 0
+          }
+          $path = $installer.FullName
+          Write-Host "Uploading $path to VirusTotal..."
+
+          $uploadResp = curl -s -X POST "https://www.virustotal.com/api/v3/files" -H "x-apikey: $env:VIRUSTOTAL_API_KEY" -F "file=@$path"
+          if (-not $uploadResp) { Write-Host "No response from VirusTotal"; exit 0 }
+          try { $uploadJson = $uploadResp | ConvertFrom-Json } catch { Write-Host "Failed to parse upload response"; exit 0 }
+          $analysisId = $uploadJson.data.id
+          if (-not $analysisId) { Write-Host "No analysis id returned, skipping"; exit 0 }
+
+          # Poll analysis status
+          $status = ""
+          for ($i=0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 5
+            $statusResp = curl -s -H "x-apikey: $env:VIRUSTOTAL_API_KEY" "https://www.virustotal.com/api/v3/analyses/$analysisId"
+            if (-not $statusResp) { continue }
+            try { $statusJson = $statusResp | ConvertFrom-Json } catch { continue }
+            $status = $statusJson.data.attributes.status
+            Write-Host "Analysis status: $status"
+            if ($status -eq 'completed') { break }
+          }
+
+          if ($status -ne 'completed') { Write-Host "Analysis did not complete in time, skipping report"; exit 0 }
+
+          # Extract file SHA256 and stats
+          $sha256 = $statusJson.meta.file_info.sha256
+          $stats = $statusJson.data.attributes.stats
+          if (-not $sha256 -or -not $stats) { Write-Host "Missing report data"; exit 0 }
+          $total = ($stats.PSObject.Properties | ForEach-Object { $_.Value } | Measure-Object -Sum).Sum
+          $malicious = ($stats.malicious) -as [int]
+
+          $reportMd = "## Antivirus report (VirusTotal)\n\n"
+          $reportMd += "Detected: **$malicious / $total** engines.\n\n"
+          $reportMd += "[Full VirusTotal report](https://www.virustotal.com/gui/file/$sha256/detection)\n"
+
+          # Fetch current release body and append report
+          $tag = "v$env:VERSION"
+          Write-Host "Updating release $tag with VirusTotal report..."
+          $current = gh release view $tag --json body -q .body 2>$null
+          if ($LASTEXITCODE -ne 0) { Write-Host "Failed to read release body, skipping"; exit 0 }
+
+          $newBody = $current + "\n\n" + $reportMd
+
+          gh release edit $tag --notes "$newBody"
