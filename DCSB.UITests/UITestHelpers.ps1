@@ -1,7 +1,8 @@
 # Shared helpers for DCSB UI/integration tests. Dot-source from a test script:
 #   . "$PSScriptRoot\UITestHelpers.ps1"
-# Requires an interactive Windows desktop session and at least one active
-# audio output device. Compatible with Windows PowerShell 5.1 and PowerShell 7.
+# Requires an interactive Windows desktop session and at least one active audio
+# output device. Must run under PowerShell 7+ (pwsh): the tests load the app's
+# own net10.0 assemblies, which Windows PowerShell 5.1 (.NET Framework) cannot.
 
 $script:RepoRoot = Split-Path $PSScriptRoot -Parent
 $script:BinDir = Join-Path $script:RepoRoot 'DCSB\bin\Release'
@@ -13,8 +14,15 @@ $script:TestSoundName = 'uitest-sound'
 $script:PeakThreshold = 0.01
 
 function Initialize-UITestContext {
+    # Windows PowerShell 5.1 runs on .NET Framework and cannot load the app's
+    # net10.0 assemblies (Add-Type below fails with a ReflectionTypeLoadException).
+    # Fail early with an actionable message instead of that cryptic loader error.
+    if ($PSVersionTable.PSEdition -ne 'Core') {
+        throw "These tests require PowerShell 7+ (pwsh); this is $($PSVersionTable.PSEdition) edition $($PSVersionTable.PSVersion). Run: pwsh -File .\Run-UITests.ps1"
+    }
+
     if (-not (Test-Path $script:ExePath)) {
-        throw "Release build not found at $script:ExePath - run 'msbuild DCSB.sln /p:Configuration=Release' first."
+        throw "Release build not found at $script:ExePath - run 'dotnet build DCSB.sln -c Release' first."
     }
 
     Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
@@ -108,13 +116,10 @@ function Restore-DcsbConfig {
     }
 }
 
-function New-DcsbTestConfig {
-    param(
-        [Parameter(Mandatory)] [string]$PrimaryOutput,
-        [string]$SoundFile
-    )
-    if (-not $SoundFile) { $SoundFile = Get-TestWavFile }
-
+# Builds an empty ConfigurationModel with the audio defaults the tests rely on.
+# Callers add presets (with sounds/counters) and pass it to Save-DcsbConfigModel.
+function New-DcsbConfig {
+    param([Parameter(Mandatory)] [string]$PrimaryOutput)
     $config = New-Object DCSB.Models.ConfigurationModel
     $config.PrimaryOutput = $PrimaryOutput
     $config.SecondaryOutput = 'Disabled'
@@ -122,20 +127,67 @@ function New-DcsbTestConfig {
     $config.PrimaryDeviceVolume = 100
     $config.WindowWidth = 900
     $config.WindowHeight = 500
+    return $config
+}
 
+function New-DcsbPreset {
+    param([Parameter(Mandatory)] [string]$Name)
     $preset = New-Object DCSB.Models.Preset
-    $preset.Name = 'UITest'
-    $sound = New-Object DCSB.Models.Sound
-    $sound.Name = $script:TestSoundName
-    $sound.Volume = 100
-    $sound.Files.Add($SoundFile)
-    $preset.SoundCollection.Add($sound)
-    $config.PresetCollection.Add($preset)
+    $preset.Name = $Name
+    return $preset
+}
 
+function New-DcsbSound {
+    param(
+        [Parameter(Mandatory)] [string]$Name,
+        [string]$File,
+        [int]$Volume = 100
+    )
+    if (-not $File) { $File = Get-TestWavFile }
+    $sound = New-Object DCSB.Models.Sound
+    $sound.Name = $Name
+    $sound.Volume = $Volume
+    $sound.Files.Add($File)
+    return $sound
+}
+
+function New-DcsbCounter {
+    param(
+        [Parameter(Mandatory)] [string]$Name,
+        [Parameter(Mandatory)] [string]$File,
+        [string]$Format = '{0}',
+        [int]$Increment = 1
+    )
+    # Count is [XmlIgnore] and derived from the file's content, so the file must
+    # already exist. Set Format before File so the model's ReadFromFile parses
+    # the initial count with the right pattern instead of erroring on '{0}'.
+    $counter = New-Object DCSB.Models.Counter
+    $counter.Name = $Name
+    $counter.Increment = $Increment
+    $counter.Format = $Format
+    $counter.File = $File
+    return $counter
+}
+
+function Save-DcsbConfigModel {
+    param([Parameter(Mandatory)] $Config)
     if (-not (Test-Path $script:ConfigDir)) { New-Item -ItemType Directory -Path $script:ConfigDir | Out-Null }
     $serializer = New-Object System.Xml.Serialization.XmlSerializer ([DCSB.Models.ConfigurationModel])
     $stream = [IO.File]::Create($script:ConfigPath)
-    try { $serializer.Serialize($stream, $config) } finally { $stream.Dispose() }
+    try { $serializer.Serialize($stream, $Config) } finally { $stream.Dispose() }
+}
+
+# The default single-preset, single-sound config most tests start from.
+function New-DcsbTestConfig {
+    param(
+        [Parameter(Mandatory)] [string]$PrimaryOutput,
+        [string]$SoundFile
+    )
+    $config = New-DcsbConfig -PrimaryOutput $PrimaryOutput
+    $preset = New-DcsbPreset -Name 'UITest'
+    $preset.SoundCollection.Add((New-DcsbSound -Name $script:TestSoundName -File $SoundFile))
+    $config.PresetCollection.Add($preset)
+    Save-DcsbConfigModel $config
 }
 
 function Get-ConfigPrimaryOutput {
@@ -153,6 +205,42 @@ function Wait-ConfigPrimaryOutput {
     do {
         if ((Get-ConfigPrimaryOutput) -eq $Expected) { return $true }
         Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+    return $false
+}
+
+function Get-ConfigSelectedPresetIndex {
+    $content = Get-Content $script:ConfigPath -Raw
+    if ($content -match '<SelectedPresetIndex>(-?\d+)</SelectedPresetIndex>') { return [int]$matches[1] }
+    return -1
+}
+
+function Wait-ConfigSelectedPresetIndex {
+    # config saves are debounced ~1s and flushed on close, hence the polling
+    param(
+        [Parameter(Mandatory)] [int]$Expected,
+        [int]$TimeoutSec = 10
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        if ((Get-ConfigSelectedPresetIndex) -eq $Expected) { return $true }
+        Start-Sleep -Milliseconds 300
+    } while ((Get-Date) -lt $deadline)
+    return $false
+}
+
+# Waits for a file to contain exactly $Expected. Counter.WriteToFile uses
+# File.WriteAllText (no trailing newline), so the match is exact.
+function Wait-FileContent {
+    param(
+        [Parameter(Mandatory)] [string]$Path,
+        [Parameter(Mandatory)] [string]$Expected,
+        [int]$TimeoutSec = 5
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        if ((Test-Path $Path) -and ([IO.File]::ReadAllText($Path) -eq $Expected)) { return $true }
+        Start-Sleep -Milliseconds 200
     } while ((Get-Date) -lt $deadline)
     return $false
 }
@@ -238,6 +326,76 @@ function Invoke-PlayTestSound {
     $row = Find-DescendantByName $MainWindow $script:TestSoundName
     if (-not $row) { throw "Sound row '$($script:TestSoundName)' not found in the main window." }
     Invoke-DoubleClickOn $row
+}
+
+function Invoke-ClickOn {
+    param([Parameter(Mandatory)] $Element)
+    $rect = $Element.Current.BoundingRectangle
+    $x = [int]($rect.X + $rect.Width / 2)
+    $y = [int]($rect.Y + $rect.Height / 2)
+    [DcsbUiTest.Native]::SetCursorPos($x, $y) | Out-Null
+    [DcsbUiTest.Native]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # LEFTDOWN
+    [DcsbUiTest.Native]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # LEFTUP
+    Start-Sleep -Milliseconds 200
+}
+
+# Single-clicks a counter/sound row by its name in the main window, which sets
+# the preset's SelectedCounter/SelectedSound (what the toolbar buttons act on).
+function Select-DcsbListRow {
+    param(
+        [Parameter(Mandatory)] $MainWindow,
+        [Parameter(Mandatory)] [string]$Name
+    )
+    Set-DcsbForeground $MainWindow
+    $row = Find-DescendantByName $MainWindow $Name
+    if (-not $row) { throw "Row '$Name' not found in the main window." }
+    Invoke-ClickOn $row
+}
+
+# Switches the active preset via the preset menu in the main window, by its
+# position in the preset collection (the same value stored as SelectedPresetIndex).
+# The menu can't be matched by title: its header is bound to the current preset
+# name (WPF's HeaderStringFormat "Preset: {0}" isn't surfaced to UI Automation),
+# and the items are data-templated so each exposes only its object type name as
+# its UIA Name. So the menu is found as the one expandable top-level menu that is
+# neither the window System menu nor a known command menu, and the item is picked
+# by index among that menu's children (which are in preset-collection order).
+function Select-DcsbPreset {
+    param(
+        [Parameter(Mandatory)] $MainWindow,
+        [Parameter(Mandatory)] [int]$Index
+    )
+    Set-DcsbForeground $MainWindow
+    $menuCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::MenuItem)
+    $topMenus = $MainWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants, $menuCondition)
+    $skip = @('System', 'Settings', 'Not Admin', 'Help')
+    $presetMenu = $null
+    foreach ($menu in $topMenus) {
+        if ($skip -contains $menu.Current.Name) { continue }
+        $ecp = $null
+        if ($menu.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ecp)) {
+            $presetMenu = $menu
+            break
+        }
+    }
+    if (-not $presetMenu) { throw 'Preset menu not found in the main window.' }
+
+    $expand = $presetMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $expand.Expand()
+    Start-Sleep -Milliseconds 400
+    try {
+        $items = $presetMenu.FindAll([System.Windows.Automation.TreeScope]::Descendants, $menuCondition)
+        if ($Index -ge $items.Count) {
+            throw "Preset index $Index out of range (menu has $($items.Count) presets)."
+        }
+        Invoke-UIElement $items[$Index]
+    } finally {
+        # invoking the item normally closes the menu; collapse defensively if not
+        try { $expand.Collapse() } catch { }
+    }
+    Start-Sleep -Milliseconds 400
 }
 
 # The settings window is an owned (modal) window of the main window; while it is
