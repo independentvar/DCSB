@@ -52,7 +52,7 @@ namespace DCSB.Business
                         MessageBoxButton.YesNo);
                 if (result == MessageBoxResult.Yes)
                 {
-                    Process.Start(releasesUrl);
+                    OpenUrl(releasesUrl);
                 }
             }
         }
@@ -74,21 +74,33 @@ namespace DCSB.Business
 
                 // the installer cannot replace files of a running instance,
                 // so start it and close the application
-                Process.Start(installerPath);
+                Process.Start(new ProcessStartInfo(installerPath) { UseShellExecute = true });
                 System.Windows.Application.Current.Dispatcher.Invoke(
                     () => System.Windows.Application.Current.Shutdown());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 MessageBoxResult fallback = MessageBox.Show(
-                        $"Downloading the update failed.\nDo you want to open {releasesUrl} to download it manually?",
+                        $"Downloading the update failed.\n{ex.Message}\n\nDo you want to open {releasesUrl} to download it manually?",
                         "Update failed",
                         MessageBoxButton.YesNo);
                 if (fallback == MessageBoxResult.Yes)
                 {
-                    Process.Start(releasesUrl);
+                    OpenUrl(releasesUrl);
                 }
             }
+        }
+
+        // On .NET, Process.Start defaults to UseShellExecute=false, which cannot
+        // launch a URL (it treats it as an executable path). Opening a URL in the
+        // default browser requires UseShellExecute=true.
+        private static void OpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch { }
         }
 
         private async Task<string> DownloadInstaller(Release release)
@@ -108,15 +120,31 @@ namespace DCSB.Business
             }
 
             string installerPath = Path.Combine(Path.GetTempPath(), installerAsset.Name);
+            // Download to a temporary file first, then move it into place, so a
+            // failed/partial download never leaves a broken installer behind and a
+            // leftover file (possibly locked by antivirus) from a previous attempt
+            // does not block the write.
+            string downloadPath = installerPath + ".download";
             using (HttpClient client = new HttpClient())
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("independentvar-DCSB");
-                using (Stream downloadStream = await client.GetStreamAsync(installerAsset.BrowserDownloadUrl))
-                using (FileStream fileStream = File.Create(installerPath))
+                using (HttpResponseMessage response = await client.GetAsync(
+                    installerAsset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    await downloadStream.CopyToAsync(fileStream);
+                    response.EnsureSuccessStatusCode();
+                    using (Stream downloadStream = await response.Content.ReadAsStreamAsync())
+                    using (FileStream fileStream = File.Create(downloadPath))
+                    {
+                        await downloadStream.CopyToAsync(fileStream);
+                    }
                 }
             }
+
+            if (File.Exists(installerPath))
+            {
+                File.Delete(installerPath);
+            }
+            File.Move(downloadPath, installerPath);
             return installerPath;
         }
 
