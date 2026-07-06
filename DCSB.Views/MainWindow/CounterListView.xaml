@@ -64,6 +64,7 @@
                   Interactivity:DataGridBehaviors.RestoreFocusOnRemove="True"
                   Interactivity:DataGridBehaviors.SyncSelectedItems="True"
                   Interactivity:DataGridBehaviors.SelectedItems="{Binding SelectedCounters, Mode=OneWayToSource}"
+                  Interactivity:DataGridRowReorderBehavior.EnableRowReorder="True"
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="False"
                   SelectionMode="Extended"
