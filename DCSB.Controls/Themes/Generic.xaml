@@ -48,6 +48,99 @@
         </Setter>
     </Style>
 
+    <Style TargetType="{x:Type local:ShortcutBox}">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="MinHeight" Value="23"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:ShortcutBox}">
+                    <Border x:Name="border" CornerRadius="3"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <Grid Margin="5,0">
+                            <!-- Current binding -->
+                            <TextBlock x:Name="valueText"
+                                       Text="{TemplateBinding Text}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <!-- Empty-state hint -->
+                            <TextBlock x:Name="placeholder"
+                                       Text="{TemplateBinding Placeholder}"
+                                       VerticalAlignment="Center"
+                                       FontStyle="Italic"
+                                       Visibility="Collapsed"
+                                       Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                            <!-- Listening state -->
+                            <TextBlock x:Name="listeningText"
+                                       Text="Press a key or click here — Esc to cancel"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       FontStyle="Italic"
+                                       Visibility="Collapsed"
+                                       Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                            <!-- Clear (appears on hover when a binding is set) -->
+                            <local:IconButton x:Name="clearButton"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Width="18" Height="18"
+                                              ToolTip="Clear shortcut"
+                                              Visibility="Collapsed"
+                                              Command="{TemplateBinding ClearCommand}"
+                                              CommandParameter="{TemplateBinding ClearCommandParameter}">
+                                <TextBlock Text="&#x2715;" FontSize="10"/>
+                            </local:IconButton>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Empty: show placeholder instead of value -->
+                        <Trigger Property="HasValue" Value="False">
+                            <Setter TargetName="valueText" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="placeholder" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+
+                        <!-- Hover with a value set: reveal the clear button -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="HasValue" Value="True"/>
+                                <Condition Property="IsActive" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="clearButton" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="valueText" Property="Margin" Value="0,0,20,0"/>
+                        </MultiTrigger>
+
+                        <!-- Hover (idle): subtle highlight so the box reads as clickable -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsActive" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                        </MultiTrigger>
+
+                        <!-- Listening: highlight and prompt -->
+                        <Trigger Property="IsActive" Value="True">
+                            <Setter TargetName="valueText" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="placeholder" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="listeningText" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="border" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="RadioButtonListItem" TargetType="{x:Type ListBoxItem}" >
         <Setter Property="Template">
             <Setter.Value>
