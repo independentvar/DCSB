@@ -145,6 +145,18 @@ namespace DCSB.ViewModels
             _applicationStateModel.ModifiedBindable = null;
         }
 
+        // Clears a specific bindable's keys directly, for the inline shortcut fields
+        // (which never open the modal, so ModifiedBindable is not set).
+        public ICommand ClearBindableCommand
+        {
+            get { return new RelayCommand<IBindable>(ClearBindable); }
+        }
+        private void ClearBindable(IBindable bindable)
+        {
+            if (bindable != null)
+                bindable.Keys.Clear();
+        }
+
         public ICommand AddCounterCommand
         {
             get { return new RelayCommand(AddCounter); }

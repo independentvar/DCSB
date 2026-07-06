@@ -7,13 +7,13 @@
              xmlns:Utils="clr-namespace:DCSB.Utils;assembly=DCSB.Utils"
              xmlns:Controls="clr-namespace:DCSB.Controls;assembly=DCSB.Controls"
              xmlns:Converters="clr-namespace:DCSB.Converters;assembly=DCSB.Converters"
-             xmlns:Interactivity="clr-namespace:DCSB.Interactivity;assembly=DCSB.Interactivity"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignHeight="300"
              d:DesignWidth="400">
 
     <UserControl.Resources>
         <Converters:VKeysToStringConverter x:Key="vKeysToStringConverter" />
+        <Converters:AreEqualConverter x:Key="areEqualConverter" />
     </UserControl.Resources>
     
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -23,7 +23,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition />
@@ -34,44 +33,79 @@
                     </Grid.RowDefinitions>
 
                     <Label Grid.Row="0" Grid.Column="0" x:Name="label">Next:</Label>
-                    <TextBox Grid.Row="0" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.CounterShortcuts.Next.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Next}" />
-                    <Button Grid.Row="0" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Next}">...</Button>
+                    <Controls:ShortcutBox Grid.Row="0" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.CounterShortcuts.Next.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Next}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Next}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.CounterShortcuts.Next" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
 
                     <Label Grid.Row="1" Grid.Column="0">Previous:</Label>
-                    <TextBox Grid.Row="1" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.CounterShortcuts.Previous.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Previous}" />
-                    <Button Grid.Row="1" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Previous}">...</Button>
-                    
+                    <Controls:ShortcutBox Grid.Row="1" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.CounterShortcuts.Previous.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Previous}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Previous}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.CounterShortcuts.Previous" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
+
                     <Label Grid.Row="2" Grid.Column="0">Increment:</Label>
-                    <TextBox Grid.Row="2" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.CounterShortcuts.Increment.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Increment}" />
-                    <Button Grid.Row="2" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Increment}">...</Button>
-                    
+                    <Controls:ShortcutBox Grid.Row="2" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.CounterShortcuts.Increment.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Increment}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Increment}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.CounterShortcuts.Increment" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
+
                     <Label Grid.Row="3" Grid.Column="0">Decrement:</Label>
-                    <TextBox Grid.Row="3" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.CounterShortcuts.Decrement.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Decrement}" />
-                    <Button Grid.Row="3" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Decrement}">...</Button>
-                    
+                    <Controls:ShortcutBox Grid.Row="3" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.CounterShortcuts.Decrement.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Decrement}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Decrement}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.CounterShortcuts.Decrement" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
+
                     <Label Grid.Row="4" Grid.Column="0">Reset:</Label>
-                    <TextBox Grid.Row="4" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.CounterShortcuts.Reset.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Reset}" />
-                    <Button Grid.Row="4" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Reset}">...</Button>
+                    <Controls:ShortcutBox Grid.Row="4" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.CounterShortcuts.Reset.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.CounterShortcuts.Reset}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.CounterShortcuts.Reset}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.CounterShortcuts.Reset" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
                 </Grid>
             </GroupBox>
 
@@ -80,37 +114,57 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition />
                         <RowDefinition />
                         <RowDefinition />
                     </Grid.RowDefinitions>
-                    
+
                     <Label Grid.Row="0" Grid.Column="0" Width="{Binding ActualWidth, ElementName=label}">Pause:</Label>
-                    <TextBox Grid.Row="0" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.SoundShortcuts.Pause.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Pause}" />
-                    <Button Grid.Row="0" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Pause}">...</Button>
+                    <Controls:ShortcutBox Grid.Row="0" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.SoundShortcuts.Pause.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Pause}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Pause}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.SoundShortcuts.Pause" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
 
                     <Label Grid.Row="1" Grid.Column="0">Continue:</Label>
-                    <TextBox Grid.Row="1" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.SoundShortcuts.Continue.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Continue}" />
-                    <Button Grid.Row="1" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Continue}">...</Button>
+                    <Controls:ShortcutBox Grid.Row="1" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.SoundShortcuts.Continue.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Continue}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Continue}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.SoundShortcuts.Continue" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
 
                     <Label Grid.Row="2" Grid.Column="0">Stop:</Label>
-                    <TextBox Grid.Row="2" Grid.Column="1" Margin="2" IsReadOnly="True" Cursor="Arrow" VerticalContentAlignment="Center"
-                             Text="{Binding ConfigurationModel.SoundShortcuts.Stop.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                             Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                             Interactivity:Commands.DoubleClickCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Stop}" />
-                    <Button Grid.Row="2" Grid.Column="2" Margin="0,2,2,2" Width="20" Command="{Binding BindKeysCommand}" 
-                            CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Stop}">...</Button>
+                    <Controls:ShortcutBox Grid.Row="2" Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.SoundShortcuts.Stop.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.SoundShortcuts.Stop}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.SoundShortcuts.Stop}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.SoundShortcuts.Stop" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
                 </Grid>
             </GroupBox>
 

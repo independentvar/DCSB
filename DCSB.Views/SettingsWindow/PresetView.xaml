@@ -12,6 +12,7 @@
 
     <UserControl.Resources>
         <Converters:VKeysToStringConverter x:Key="vKeysToStringConverter" />
+        <Converters:AreEqualConverter x:Key="areEqualConverter" />
     </UserControl.Resources>
 
     <Grid>
@@ -47,14 +48,21 @@
                          Text="{Binding SelectedPreset.Name}" />
             </DockPanel>
 
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Width="20" Margin="5,0,0,0" Height="{Binding ActualHeight, ElementName=NameField}" 
-                        Command="{Binding BindKeysCommand}" CommandParameter="{Binding SelectedPreset}">...</Button>
-                <TextBox IsReadOnly="True" Cursor="Arrow" Height="{Binding ActualHeight, ElementName=NameField}"
-                         Text="{Binding SelectedPreset.Keys, Converter={StaticResource vKeysToStringConverter}}"
-                         Interactivity:Commands.DoubleClickCommand="{Binding BindKeysCommand}"
-                         Interactivity:Commands.DoubleClickCommandParameter="{Binding SelectedPreset}" />
-            </DockPanel>
+            <Controls:ShortcutBox Margin="0,5,0,0"
+                                  Height="{Binding ActualHeight, ElementName=NameField}"
+                                  Placeholder="Click to set preset shortcut"
+                                  Text="{Binding SelectedPreset.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                  Command="{Binding BindKeysCommand}"
+                                  CommandParameter="{Binding SelectedPreset}"
+                                  ClearCommand="{Binding ClearBindableCommand}"
+                                  ClearCommandParameter="{Binding SelectedPreset}">
+                <Controls:ShortcutBox.IsActive>
+                    <MultiBinding Converter="{StaticResource areEqualConverter}">
+                        <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                        <Binding Path="SelectedPreset" />
+                    </MultiBinding>
+                </Controls:ShortcutBox.IsActive>
+            </Controls:ShortcutBox>
         </StackPanel>
 
         <ListView Grid.Row="1"
