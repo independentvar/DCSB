@@ -26,11 +26,18 @@ namespace DCSB.Business
         {
             if (_applicationStateModel.ModifiedBindable != null)
             {
+                // Escape cancels the binding instead of being recorded, so there is a way
+                // out of the "Press keys…" state without committing a key.
+                if (key == VKey.ESCAPE)
+                {
+                    _applicationStateModel.ModifiedBindable = null;
+                    return;
+                }
+
                 _applicationStateModel.ModifiedBindable.Keys.Clear();
                 foreach (VKey pressedKey in pressedKeys)
                     _applicationStateModel.ModifiedBindable.Keys.Add(pressedKey);
 
-                _applicationStateModel.BindKeysOpened = false;
                 _applicationStateModel.ModifiedBindable = null;
             }
         }

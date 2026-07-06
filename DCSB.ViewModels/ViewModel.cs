@@ -897,35 +897,16 @@ namespace DCSB.ViewModels
         {
             get { return new RelayCommand<IBindable>(BindKeys); }
         }
+        // Toggles inline key capture for a field: click to start listening, click the
+        // same field again to cancel. The global hook writes the keys on the next
+        // key-up (see ShortcutManager.KeyUp) and clears ModifiedBindable.
         public void BindKeys(IBindable bindable)
         {
-            _applicationStateModel.ModifiedBindable = bindable;
-            _applicationStateModel.BindKeysOpened = true;
+            _applicationStateModel.ModifiedBindable =
+                _applicationStateModel.ModifiedBindable == bindable ? null : bindable;
         }
 
-        public ICommand CancelBindKeysCommand
-        {
-            get { return new RelayCommand(CancelBindKeys); }
-        }
-        public void CancelBindKeys()
-        {
-            _applicationStateModel.BindKeysOpened = false;
-            _applicationStateModel.ModifiedBindable = null;
-        }
-
-        public ICommand ClearKeysCommand
-        {
-            get { return new RelayCommand(ClearKeys); }
-        }
-        private void ClearKeys()
-        {
-            _applicationStateModel.BindKeysOpened = false;
-            _applicationStateModel.ModifiedBindable.Keys.Clear();
-            _applicationStateModel.ModifiedBindable = null;
-        }
-
-        // Clears a specific bindable's keys directly, for the inline shortcut fields
-        // (which never open the modal, so ModifiedBindable is not set).
+        // Clears a specific bindable's keys directly, for the inline shortcut fields.
         public ICommand ClearBindableCommand
         {
             get { return new RelayCommand<IBindable>(ClearBindable); }

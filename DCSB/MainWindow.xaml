@@ -27,13 +27,10 @@
         <Interactivity:OpenCloseWindowBehavior WindowType="local:SoundWindow" 
                                                Open="{Binding ApplicationStateModel.SoundOpened, Mode=TwoWay}" 
                                                DataContext="{Binding}" />
-        <Interactivity:OpenCloseWindowBehavior WindowType="local:CounterWindow" 
-                                               Open="{Binding ApplicationStateModel.CounterOpened, Mode=TwoWay}" 
+        <Interactivity:OpenCloseWindowBehavior WindowType="local:CounterWindow"
+                                               Open="{Binding ApplicationStateModel.CounterOpened, Mode=TwoWay}"
                                                DataContext="{Binding}" />
-        <Interactivity:OpenCloseWindowBehavior WindowType="local:BindKeysWindow" 
-                                               Open="{Binding ApplicationStateModel.BindKeysOpened, Mode=TwoWay}" 
-                                               DataContext="{Binding}" />
-        <Interactivity:OpenCloseWindowBehavior WindowType="local:AboutWindow" 
+        <Interactivity:OpenCloseWindowBehavior WindowType="local:AboutWindow"
                                                Open="{Binding ApplicationStateModel.AboutOpened, Mode=TwoWay}" 
                                                DataContext="{Binding}" />
     </i:Interaction.Behaviors>

@@ -79,8 +79,9 @@
                                        Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
                             <!-- Listening state -->
                             <TextBlock x:Name="listeningText"
-                                       Text="Press keys…"
+                                       Text="Press a key or click here — Esc to cancel"
                                        VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
                                        FontStyle="Italic"
                                        Visibility="Collapsed"
                                        Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>

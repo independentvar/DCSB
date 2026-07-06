@@ -23,20 +23,21 @@ namespace DCSB.Input
         private const int WM_XBUTTONDOWN = 0x020B;
         private const int WM_XBUTTONUP = 0x020C;
 
-        private const uint GA_ROOT = 2;
-
         private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
-        // Clicks landing on this window are ignored, so the key binding dialog's own buttons
-        // can be clicked without triggering or committing a mouse button binding.
-        public static IntPtr ExcludedWindowHandle { get; set; }
+        // While a field is listening for a binding this holds its on-screen rectangle
+        // (physical pixels). Mouse buttons are then captured only when the click lands
+        // inside it, so clicking the field binds the button while clicks elsewhere are
+        // ignored. Empty (the default) means no binding is in progress, and buttons are
+        // captured everywhere as usual so mouse-button shortcuts keep working.
+        public static System.Drawing.Rectangle BindingRegion { get; set; }
 
         // Keep a reference to the hook procedure so the garbage collector does not release it.
         private readonly LowLevelMouseProc _hookProcedure;
         private readonly IntPtr _hookHandle;
 
-        // Buttons whose down event was swallowed because it landed on the excluded window;
-        // their matching up event has to be swallowed as well.
+        // Buttons whose down event was swallowed because it landed outside the binding
+        // region; their matching up event has to be swallowed as well.
         private readonly HashSet<VKey> _suppressedButtons = new HashSet<VKey>();
 
         private bool _disposed;
@@ -62,7 +63,7 @@ namespace DCSB.Input
                 {
                     if (message == WM_LBUTTONDOWN || message == WM_RBUTTONDOWN || message == WM_MBUTTONDOWN || message == WM_XBUTTONDOWN)
                     {
-                        if (IsOverExcludedWindow(data.pt))
+                        if (IsOutsideBindingRegion(data.pt))
                         {
                             _suppressedButtons.Add(button);
                         }
@@ -105,12 +106,10 @@ namespace DCSB.Input
             }
         }
 
-        private bool IsOverExcludedWindow(POINT point)
+        private static bool IsOutsideBindingRegion(POINT point)
         {
-            IntPtr excluded = ExcludedWindowHandle;
-            if (excluded == IntPtr.Zero) return false;
-            IntPtr window = WindowFromPoint(point);
-            return window != IntPtr.Zero && (window == excluded || GetAncestor(window, GA_ROOT) == excluded);
+            System.Drawing.Rectangle region = BindingRegion;
+            return !region.IsEmpty && !region.Contains(point.x, point.y);
         }
 
         public void Dispose()
@@ -162,11 +161,5 @@ namespace DCSB.Input
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr WindowFromPoint(POINT point);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
     }
 }

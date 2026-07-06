@@ -7,4 +7,7 @@
   <ItemGroup>
     <Compile Include="..\AssemblyVersionInfo.cs" Link="Properties\AssemblyVersionInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DCSB.Input\DCSB.Input.csproj" />
+  </ItemGroup>
 </Project>

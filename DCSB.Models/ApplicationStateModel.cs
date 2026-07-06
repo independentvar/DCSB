@@ -37,17 +37,6 @@ namespace DCSB.Models
             }
         }
 
-        private bool _bindKeysOpened;
-        public bool BindKeysOpened
-        {
-            get { return _bindKeysOpened; }
-            set
-            {
-                _bindKeysOpened = value;
-                OnPropertyChanged("BindKeysOpened");
-            }
-        }
-
         private bool _aboutOpened;
         public bool AboutOpened
         {

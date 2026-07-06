@@ -1,35 +1,53 @@
-# Verifies the Sound dialog's File/s and Key/s boxes open their pickers on a
-# SINGLE left-click. Both boxes are read-only; previously they required a
-# double-click, now one click on the box (like clicking the '...' button) must
-# be enough. Clicking the File/s box opens the 'Choose sound file/s' picker;
-# clicking the Key/s box opens the (title-less) key-binding window.
+# Verifies the Sound dialog's File/s and Key/s boxes react to a SINGLE left-click.
+# File/s is a read-only Edit that opens the 'Choose sound file/s' picker. Key/s is
+# now an inline ShortcutBox (no separate key-binding window): one click puts it into
+# the listening state in place. The opening click must act on button RELEASE and must
+# not be captured; then a click INSIDE the listening box binds that mouse button, and
+# Escape cancels without recording anything.
 . "$PSScriptRoot\UITestHelpers.ps1"
 
-# The Sound dialog's Edit controls top-to-bottom are: [0] Name, [1] File/s,
-# [2] Key/s (there is no automation id on any of them, so order by position).
+# The Sound dialog's Edit controls are now just [0] Name and [1] File/s (Key/s is
+# a ShortcutBox, not an Edit). Order by vertical position; there are no automation
+# ids on them.
 function Get-SoundDialogEdits {
     param([Parameter(Mandatory)] $Window)
     $edits = @(Get-WindowEdits $Window | Sort-Object { $_.Current.BoundingRectangle.Y })
-    if ($edits.Count -lt 3) { throw "Expected 3 text boxes in the Sound dialog, found $($edits.Count)." }
+    if ($edits.Count -lt 2) { throw "Expected at least 2 text boxes in the Sound dialog, found $($edits.Count)." }
     return $edits
 }
 
-function Get-EditValue {
-    param([Parameter(Mandatory)] $Edit)
-    return $Edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+# Returns every Text element's Name in the window (labels and the ShortcutBox's
+# visible text; collapsed template text is not in the automation tree).
+function Get-DialogTexts {
+    param([Parameter(Mandatory)] $Window)
+    $textCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::Text)
+    return @($Window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $textCondition) |
+        ForEach-Object { $_.Current.Name })
 }
 
-# The key-binding window has no title (WindowStyle=None) and is owned by the
-# main window; find it by its 'Clear' button, which no other DCSB window has.
-function Wait-BindKeysWindow {
-    param([Parameter(Mandatory)] $MainWindow, [int]$TimeoutSec = 8)
+# The Key/s ShortcutBox shows "Press keys…" only while it is capturing.
+function Test-KeysListening {
+    param([Parameter(Mandatory)] $Window)
+    return [bool](@(Get-DialogTexts $Window) | Where-Object { $_ -like 'Press keys*' })
+}
+
+function Wait-KeysListening {
+    param([Parameter(Mandatory)] $Window, [int]$TimeoutSec = 8)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     do {
-        $clear = Find-DescendantByName $MainWindow 'Clear'
-        if ($clear) { return $true }
+        if (Test-KeysListening $Window) { return $true }
         Start-Sleep -Milliseconds 300
     } while ((Get-Date) -lt $deadline)
     return $false
+}
+
+# True if any binding shown in the dialog names a mouse button - i.e. a click was
+# wrongly captured. The dialog's other labels never contain these words.
+function Test-DialogHasMouseBinding {
+    param([Parameter(Mandatory)] $Window)
+    return [bool](@(Get-DialogTexts $Window) | Where-Object { $_ -match 'Click|Mouse' })
 }
 
 Invoke-UITest -Name 'Sound dialog File/s and Key/s boxes react to a single click' -Body {
@@ -56,44 +74,54 @@ Invoke-UITest -Name 'Sound dialog File/s and Key/s boxes react to a single click
     $fileDialog.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Start-Sleep -Milliseconds 400
 
-    # --- Key/s box: a single click opens the key-binding window ---
-    # It must open on button RELEASE, not press (like the '...' button does). The
-    # key-binding dialog captures mouse buttons through a global hook that runs
-    # before this handler; if the box opened the dialog on button-DOWN, that same
-    # click's release would be captured as the binding ("Left Click") and close
-    # the window instantly. Opening on release means the hook processes (and
-    # ignores) the release before the dialog is listening. Record the current
-    # binding (a new sound gets an auto-assigned key) to prove it stays untouched.
-    $keysBaseline = Get-EditValue (Get-SoundDialogEdits $soundWindow)[2]
+    # The Key/s ShortcutBox has no automation element of its own; click it using the
+    # File/s box's horizontal position (same grid column) at the Key/s label's row.
     Set-DcsbForeground $soundWindow
-    $keysRect = (Get-SoundDialogEdits $soundWindow)[2].Current.BoundingRectangle
-    $kx = [int]($keysRect.X + $keysRect.Width / 2)
-    $ky = [int]($keysRect.Y + $keysRect.Height / 2)
+    $filesRect = (Get-SoundDialogEdits $soundWindow)[1].Current.BoundingRectangle
+    $keysLabel = Find-DescendantByName $soundWindow 'Key/s:'
+    Assert-True ($null -ne $keysLabel) "'Key/s:' label not found in the Sound dialog"
+    $labelRect = $keysLabel.Current.BoundingRectangle
+    $kx = [int]($filesRect.X + $filesRect.Width / 2)
+    $ky = [int]($labelRect.Y + $labelRect.Height / 2)
+
+    # --- Key/s box: a single click starts inline capture, on RELEASE not press ---
+    # The global mouse hook runs before WPF sees the click; starting capture on
+    # button-down would let that same click's release be captured as the binding
+    # ("Left Click"). Starting on release means the hook processes the button before
+    # capture arms, so the opening click is not recorded.
     [DcsbUiTest.Native]::SetCursorPos($kx, $ky) | Out-Null
     [DcsbUiTest.Native]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # LEFTDOWN
     Start-Sleep -Milliseconds 300
-    Assert-True (-not (Wait-BindKeysWindow $main 1)) `
-        'key-binding window opened on mouse-down; it must open on release so the opening click is not captured as the binding'
+    Assert-True (-not (Test-KeysListening $soundWindow)) `
+        'Key/s box entered capture on mouse-down; it must start on release so the opening click is not captured as the binding'
     [DcsbUiTest.Native]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # LEFTUP
-    Assert-True (Wait-BindKeysWindow $main) `
-        'single click on the Key/s box did not open the key-binding window'
-    Write-Host '  single click on Key/s opened the key-binding window (on release)'
+    Assert-True (Wait-KeysListening $soundWindow) `
+        'single click on the Key/s box did not start inline key capture'
+    Assert-True (-not (Test-DialogHasMouseBinding $soundWindow)) `
+        'the opening click was captured as a mouse-button binding'
+    Write-Host '  single click on Key/s started inline capture (on release), uncaptured'
 
-    # the opening click must not itself be captured: no mouse button may be bound
-    $keysValue = Get-EditValue (Get-SoundDialogEdits $soundWindow)[2]
-    Assert-True (($keysValue -eq $keysBaseline) -and -not ($keysValue -match 'Click|Mouse')) `
-        "opening click changed the binding (was '$keysBaseline', now '$keysValue')"
+    # --- Escape cancels without recording anything ---
+    Send-EscapeKey
+    Start-Sleep -Milliseconds 300
+    Assert-True (-not (Test-KeysListening $soundWindow)) 'Escape did not cancel capture'
+    Assert-True (-not (Test-DialogHasMouseBinding $soundWindow)) `
+        'Escape or the cancel left a mouse binding behind'
+    Write-Host '  Escape cancelled capture'
 
-    # close the key-binding window via its Cancel button (it ignores mouse clicks)
-    $cancel = Find-DescendantByName $main 'Cancel'
-    Assert-True ($null -ne $cancel) 'Cancel button not found in the key-binding window'
-    Invoke-UIElement $cancel
+    # --- clicking inside the listening box binds that mouse button ---
+    # Start listening again, then a second click inside the box must be captured by
+    # the hook (its point is inside the published binding region) and recorded as a
+    # "Left Click" binding, ending capture without the box re-arming.
+    Invoke-ClickAt $kx $ky
+    Assert-True (Wait-KeysListening $soundWindow) 'Key/s box did not start capture on the second attempt'
+    Invoke-ClickAt $kx $ky
     Start-Sleep -Milliseconds 400
-
-    # cancelling leaves the original binding in place
-    $keysValue = Get-EditValue (Get-SoundDialogEdits $soundWindow)[2]
-    Assert-True ($keysValue -eq $keysBaseline) `
-        "Key/s binding changed after cancelling (was '$keysBaseline', now '$keysValue')"
+    Assert-True (-not (Test-KeysListening $soundWindow)) `
+        'clicking inside the listening box did not end capture (the box re-armed after binding)'
+    Assert-True (Test-DialogHasMouseBinding $soundWindow) `
+        'clicking inside the listening box did not bind the mouse button'
+    Write-Host '  clicking inside the box bound the mouse button'
 
     $soundWindow.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Stop-Dcsb $process

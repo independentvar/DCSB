@@ -48,6 +48,7 @@ namespace DcsbUiTest {
         [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
         [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
     }
 }
 '@
@@ -354,6 +355,20 @@ function Invoke-ClickOn {
     [DcsbUiTest.Native]::SetCursorPos($x, $y) | Out-Null
     [DcsbUiTest.Native]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # LEFTDOWN
     [DcsbUiTest.Native]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # LEFTUP
+    Start-Sleep -Milliseconds 200
+}
+
+function Invoke-ClickAt {
+    param([Parameter(Mandatory)] [int]$X, [Parameter(Mandatory)] [int]$Y)
+    [DcsbUiTest.Native]::SetCursorPos($X, $Y) | Out-Null
+    [DcsbUiTest.Native]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # LEFTDOWN
+    [DcsbUiTest.Native]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # LEFTUP
+    Start-Sleep -Milliseconds 200
+}
+
+function Send-EscapeKey {
+    [DcsbUiTest.Native]::keybd_event(0x1B, 0, 0, [UIntPtr]::Zero)  # VK_ESCAPE down
+    [DcsbUiTest.Native]::keybd_event(0x1B, 0, 2, [UIntPtr]::Zero)  # KEYEVENTF_KEYUP
     Start-Sleep -Milliseconds 200
 }
 
