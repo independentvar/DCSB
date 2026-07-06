@@ -394,6 +394,69 @@ namespace DCSB.ViewModels
             }
         }
 
+        public ICommand BackupSettingsCommand
+        {
+            get { return new RelayCommand(BackupSettings); }
+        }
+        private void BackupSettings()
+        {
+            string path = _openFileManager.SaveBackupFile();
+            if (path == null)
+            {
+                return;
+            }
+            try
+            {
+                _configurationManager.Backup(_configurationModel, path);
+                MessageBox.Show("Settings and key bindings backed up successfully.",
+                    "Backup", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Failed to save backup:\n" + e.Message,
+                    "Backup", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public ICommand RestoreSettingsCommand
+        {
+            get { return new RelayCommand(RestoreSettings); }
+        }
+        private void RestoreSettings()
+        {
+            string path = _openFileManager.OpenBackupFile();
+            if (path == null)
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                "Restoring will replace your current settings and key bindings, then restart DCSB.\n\n" +
+                "Continue?",
+                "Restore Backup", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                _configurationManager.Restore(path);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("The selected file is not a valid DCSB backup:\n" + e.Message,
+                    "Restore", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // restart so the whole app reloads from the restored config.xml and rewires
+            // commands, shortcuts and bindings from scratch
+            var exeName = Process.GetCurrentProcess().MainModule.FileName;
+            Process.Start(new ProcessStartInfo(exeName));
+            Application.Current.Shutdown();
+        }
+
         public ICommand OpenSettingsCommand
         {
             get { return new RelayCommand(OpenSettings); }

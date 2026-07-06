@@ -29,6 +29,23 @@
             <GroupBox Header="Other">
                 <CheckBox IsChecked="{Binding ConfigurationModel.MinimizeToTray}">Minimize to tray</CheckBox>
             </GroupBox>
+
+            <GroupBox Header="Backup &amp; Restore">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap"
+                               Margin="0,0,0,6"
+                               Text="Back up your settings and key bindings to a file, or restore them from a previous backup. Restoring restarts DCSB." />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Back up..."
+                                Command="{Binding BackupSettingsCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,0" />
+                        <Button Content="Restore..."
+                                Command="{Binding RestoreSettingsCommand}"
+                                Padding="10,3" />
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

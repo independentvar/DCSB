@@ -109,6 +109,90 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void BackupThenRestore_RoundTripsConfigurationIntoConfigFile()
+        {
+            string backupPath = Path.Combine(Path.GetTempPath(), "DCSB.Tests",
+                Guid.NewGuid().ToString("N") + ".xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
+            try
+            {
+                ConfigurationModel model = new ConfigurationModel
+                {
+                    Volume = 55,
+                    MinimizeToTray = true
+                };
+                model.PresetCollection.Add(new Preset { Name = "Backed up" });
+
+                // start from a different live config, back the model up, then restore it
+                using (ConfigurationManager manager = new ConfigurationManager(_configDirectory))
+                {
+                    manager.Save(new ConfigurationModel { Volume = 1 });
+                    manager.Backup(model, backupPath);
+                    manager.Restore(backupPath);
+                }
+
+                ConfigurationModel loaded = new ConfigurationManager(_configDirectory).Load();
+                Assert.AreEqual(55, loaded.Volume);
+                Assert.IsTrue(loaded.MinimizeToTray);
+                Assert.AreEqual(1, loaded.PresetCollection.Count);
+                Assert.AreEqual("Backed up", loaded.PresetCollection[0].Name);
+            }
+            finally
+            {
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void Restore_AfterRestoring_SuppressesFurtherSaves()
+        {
+            string backupPath = Path.Combine(Path.GetTempPath(), "DCSB.Tests",
+                Guid.NewGuid().ToString("N") + ".xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
+            try
+            {
+                using (ConfigurationManager manager = new ConfigurationManager(_configDirectory))
+                {
+                    manager.Backup(new ConfigurationModel { Volume = 77 }, backupPath);
+                    manager.Restore(backupPath);
+
+                    // a late change (or the flush on Dispose) must not clobber the restore
+                    manager.Save(new ConfigurationModel { Volume = 99 });
+                }
+
+                Assert.AreEqual(77, new ConfigurationManager(_configDirectory).Load().Volume);
+            }
+            finally
+            {
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void Restore_WithInvalidBackupFile_Throws()
+        {
+            string backupPath = Path.Combine(Path.GetTempPath(), "DCSB.Tests",
+                Guid.NewGuid().ToString("N") + ".xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
+            File.WriteAllText(backupPath, "this is not xml");
+            try
+            {
+                ConfigurationManager manager = new ConfigurationManager(_configDirectory);
+                Assert.Throws<InvalidOperationException>(() => manager.Restore(backupPath));
+            }
+            finally
+            {
+                File.Delete(backupPath);
+            }
+        }
+
+        [TestMethod]
         public void Load_WithCorruptConfigFile_ReturnsDefaultsAndMovesFileAside()
         {
             Directory.CreateDirectory(_configDirectory);

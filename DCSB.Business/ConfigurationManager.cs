@@ -26,6 +26,7 @@ namespace DCSB.Business
         private Timer _timer;
         private ConfigurationModel _model;
         private int _failedSaveAttempts;
+        private bool _suppressSave;
 
         public ConfigurationManager()
             : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DirectoryName))
@@ -125,6 +126,12 @@ namespace DCSB.Business
         {
             lock (_saveLock)
             {
+                // a restore has taken over the config file and the app is on its way to
+                // restarting; don't let a late change write the old model back over it
+                if (_suppressSave)
+                {
+                    return;
+                }
                 _model = model;
                 _failedSaveAttempts = 0;
                 if (_timer == null)
@@ -132,6 +139,46 @@ namespace DCSB.Business
                     _timer = new Timer(SaveCallback, null, SaveDelay, Timeout.Infinite);
                 }
             }
+        }
+
+        // Writes the given configuration (settings plus every preset, sound key and
+        // shortcut binding) to a user-chosen file. Throws on I/O failure so the caller
+        // can report it.
+        public void Backup(ConfigurationModel model, string destinationPath)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            using (FileStream stream = File.Create(destinationPath))
+            {
+                serializer.Serialize(stream, model);
+            }
+        }
+
+        // Loads a backup file, writes it over the live config.xml and stops any further
+        // saves. The caller is expected to restart the app so it reloads the restored
+        // configuration cleanly; suppressing saves keeps the pending debounced write (or
+        // the flush on shutdown) from clobbering the restored file with the old model.
+        // Throws if the backup file is missing or not a valid configuration.
+        public ConfigurationModel Restore(string backupPath)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel restored;
+            using (FileStream stream = File.Open(backupPath, FileMode.Open))
+            {
+                restored = (ConfigurationModel)serializer.Deserialize(stream);
+            }
+
+            lock (_saveLock)
+            {
+                if (_timer != null)
+                {
+                    _timer.Dispose();
+                    _timer = null;
+                }
+                _suppressSave = true;
+                _model = restored;
+                WriteConfiguration();
+            }
+            return restored;
         }
 
         private void CreateFile(string filePath)
