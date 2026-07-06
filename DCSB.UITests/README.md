@@ -47,6 +47,7 @@ machine).
 | `Test-AddCounterNamePrefill` | Same prefill behavior for the Counter dialog's file picker. |
 | `Test-AutoAssignKeys` | New sounds get the first free auto-assigned key (`KEY_1` by default); switching Settings → Shortcuts to the numpad key set makes the next sound get `NUMPAD1`; unchecking the feature stops assignment. Verified in the saved `config.xml`. |
 | `Test-SingleInstance` | Launching a second `DCSB.exe` exits it (single-instance mutex) and restores the minimized window of the already-running instance. |
+| `Test-UpdateCheck` | The full "update available" flow, incl. a **real** installer download. Builds a throwaway `v0.0.0.1` copy of the app (so it's out of date against the real release feed), runs it, verifies the "New version _X_ is available" offer names the actual newest GitHub release, clicks **Yes**, and confirms the newest release's installer really downloads to `%TEMP%` (matching size + PE header). The app then tries to launch that (admin) installer, so **a UAC prompt briefly appears and the screen dims** — the test kills the app right after the download to cancel that launch, so nothing is installed. Needs the .NET SDK (to build the copy). Skipped if the GitHub feed is unreachable, the newest release has no `.exe` asset, or `dotnet` is missing. |
 
 ## Safety around user state
 

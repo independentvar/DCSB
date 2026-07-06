@@ -12,6 +12,11 @@ $script:ConfigPath = Join-Path $script:ConfigDir 'config.xml'
 
 $script:TestSoundName = 'uitest-sound'
 $script:PeakThreshold = 0.01
+# The main window's title (WPF surfaces it as the window's UIA Name). Used to
+# identify the main window by name, not just by process id: the process can own
+# more than one top-level window at once (most notably a startup update-offer
+# MessageBox), and matching on pid alone can latch onto whichever is topmost.
+$script:MainWindowTitle = 'Deathcounter and Soundboard'
 
 function Initialize-UITestContext {
     # Windows PowerShell 5.1 runs on .NET Framework and cannot load the app's
@@ -258,7 +263,10 @@ function Stop-AllDcsb {
 }
 
 function Start-Dcsb {
-    $process = Start-Process $script:ExePath -PassThru
+    # Launches the built Release exe by default; pass -ExePath to run a different
+    # build (the update-download test runs a throwaway low-version copy).
+    param([string]$ExePath = $script:ExePath)
+    $process = Start-Process $ExePath -PassThru
     $window = $null
     $deadline = (Get-Date).AddSeconds(15)
     while ((Get-Date) -lt $deadline -and -not $window) {
@@ -284,10 +292,20 @@ function Stop-Dcsb {
 # ---------- UI automation ----------
 
 function Get-DcsbMainWindow {
+    # Matches on process id AND the main window's title. Pid alone is ambiguous
+    # whenever the process shows a second top-level window - most importantly the
+    # startup auto-update offer, an unowned MessageBox (it's shown from a
+    # background thread, so WPF gives it no owner). That box can be topmost and so
+    # be returned first by a pid-only match, which would make callers treat the
+    # offer dialog as the main window (and then misread the real main window as a
+    # stray modal). Filtering by the stable title avoids that race.
     param([Parameter(Mandatory)] [int]$ProcessId)
     $root = [System.Windows.Automation.AutomationElement]::RootElement
-    $condition = New-Object System.Windows.Automation.PropertyCondition(
-        [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $ProcessId)
+    $condition = New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $ProcessId)),
+        (New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::NameProperty, $script:MainWindowTitle)))
     return $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $condition)
 }
 
@@ -529,6 +547,93 @@ function Wait-DcsbWindow {
     throw "Window '$Title' did not appear within $TimeoutSec seconds."
 }
 
+# Triggers Help -> "Check for updates". The item lives in the collapsed "Help"
+# submenu, so the menu is expanded first, then the item is invoked (via the
+# Invoke pattern, so no mouse coordinates are needed).
+function Invoke-DcsbUpdateCheck {
+    param([Parameter(Mandatory)] $MainWindow)
+    Set-DcsbForeground $MainWindow
+    $help = Find-DescendantByName $MainWindow 'Help'
+    if (-not $help) { throw "'Help' menu not found in the main window." }
+    $expand = $null
+    if ($help.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$expand)) {
+        $expand.Expand()
+        Start-Sleep -Milliseconds 300
+    }
+    $item = Find-DescendantByName $MainWindow 'Check for updates'
+    if (-not $item) { throw "'Check for updates' menu item not found." }
+    Invoke-UIElement $item
+    if ($expand) { try { $expand.Collapse() } catch { } }
+}
+
+# Does a single, non-blocking sweep for a modal dialog (a WPF MessageBox)
+# belonging to the DCSB process, returning its AutomationElement or $null. The
+# "No update available." box has an empty title, so it can't be found by name
+# with Wait-DcsbWindow. A WPF MessageBox is an owned window: it shows up as a
+# Window descendant of its owner (the main window), and may also appear as a
+# top-level window of the process.
+function Get-DcsbModalDialog {
+    param([Parameter(Mandatory)] $MainWindow)
+    $processId = $MainWindow.Current.ProcessId
+    $mainHandle = $MainWindow.Current.NativeWindowHandle
+    $windowCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::Window)
+    $pidCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)
+    # owned MessageBox appears as a Window descendant of the main window ...
+    $owned = $MainWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants, $windowCondition)
+    foreach ($candidate in $owned) {
+        if ($candidate.Current.NativeWindowHandle -ne $mainHandle) { return $candidate }
+    }
+    # ... and may also surface as a top-level window of the process
+    $tops = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
+        [System.Windows.Automation.TreeScope]::Children, $pidCondition)
+    foreach ($top in $tops) {
+        if ($top.Current.NativeWindowHandle -eq $mainHandle) { continue }
+        if ($top.Current.ControlType.ProgrammaticName -eq 'ControlType.Window') { return $top }
+    }
+    return $null
+}
+
+# Waits up to $TimeoutSec for such a modal dialog to appear, or $null on timeout.
+function Wait-DcsbModalDialog {
+    param(
+        [Parameter(Mandatory)] $MainWindow,
+        [int]$TimeoutSec = 30
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 400
+        $dialog = Get-DcsbModalDialog $MainWindow
+        if ($dialog) { return $dialog }
+    }
+    return $null
+}
+
+# Joins the text of every Text element in a dialog - the body of a MessageBox.
+function Get-DialogText {
+    param([Parameter(Mandatory)] $Dialog)
+    $textCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::Text)
+    $texts = $Dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants, $textCondition)
+    return (($texts | ForEach-Object { $_.Current.Name }) -join ' ')
+}
+
+# Clicks a named button (OK / Yes / No) in a dialog. Returns $true if found.
+function Invoke-DialogButton {
+    param(
+        [Parameter(Mandatory)] $Dialog,
+        [Parameter(Mandatory)] [string]$Name
+    )
+    $button = Find-DescendantByName $Dialog $Name
+    if (-not $button) { return $false }
+    Invoke-UIElement $button
+    Start-Sleep -Milliseconds 300
+    return $true
+}
+
 function Select-OpenFileDialogFile {
     # types a full path into the common file dialog's file-name box and confirms.
     # Uses the dialog's locale-independent automation ids: 1148 = file-name
@@ -626,6 +731,89 @@ function Wait-AnyEditContains {
         Start-Sleep -Milliseconds 300
     } while ((Get-Date) -lt $deadline)
     return $false
+}
+
+# ---------- update / release helpers ----------
+
+# Queries this fork's GitHub releases the same way the app does (newest first)
+# and returns the newest release's version (parsed from the tag) together with
+# its .exe installer asset (name/size/url). Returns $null if GitHub can't be
+# reached, so callers can SKIP when the precondition (a reachable feed) is unmet.
+function Get-DcsbNewestReleaseInstaller {
+    try {
+        $headers = @{ 'User-Agent' = 'independentvar-DCSB'; 'Accept' = 'application/vnd.github+json' }
+        $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/independentvar/DCSB/releases' `
+            -Headers $headers -TimeoutSec 20
+        $newest = @($releases)[0]
+        if (-not $newest) { return $null }
+        # the app parses the version from the tag with this same pattern
+        if ($newest.tag_name -notmatch '\d+\.\d+\.\d+\.\d+') { return $null }
+        $version = [Version]$matches[0]
+        # the app downloads the first asset whose name ends in .exe
+        $asset = $newest.assets | Where-Object { $_.name -match '\.exe$' } | Select-Object -First 1
+        return [PSCustomObject]@{
+            TagName       = $newest.tag_name
+            Version       = $version
+            InstallerName = if ($asset) { $asset.name } else { $null }
+            InstallerSize = if ($asset) { [long]$asset.size } else { 0 }
+            DownloadUrl   = if ($asset) { $asset.browser_download_url } else { $null }
+        }
+    } catch {
+        return $null
+    }
+}
+
+# Builds a throwaway copy of the app that reports version $Version into
+# $OutputDir, so the update check sees the app as out of date and offers the
+# newest GitHub release. The version lives in the repo-root AssemblyVersionInfo.cs
+# (link-compiled into every assembly and read via GetExecutingAssembly), so there
+# is no runtime lever - the file is patched just for this build and restored
+# immediately in a finally, even if the build fails. Throws a SKIP if the .NET
+# SDK isn't available. Returns the path to the built DCSB.exe.
+function Build-DcsbDowngraded {
+    param(
+        [Parameter(Mandatory)] [string]$Version,
+        [Parameter(Mandatory)] [string]$OutputDir
+    )
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw 'SKIP: the .NET SDK (dotnet) is required to build the downgraded copy for the update-download test.'
+    }
+    $versionFile = Join-Path $script:RepoRoot 'AssemblyVersionInfo.cs'
+    $csproj = Join-Path $script:RepoRoot 'DCSB\DCSB.csproj'
+    $original = [IO.File]::ReadAllText($versionFile)
+    try {
+        $patched = $original -replace 'AssemblyVersion\("[^"]*"\)', ('AssemblyVersion("{0}")' -f $Version)
+        $patched = $patched -replace 'AssemblyFileVersion\("[^"]*"\)', ('AssemblyFileVersion("{0}")' -f $Version)
+        if ($patched -eq $original) { throw "could not patch the version literals in $versionFile" }
+        [IO.File]::WriteAllText($versionFile, $patched)
+
+        Write-Host "  building a v$Version copy of DCSB (this can take a bit)..."
+        $log = & dotnet build $csproj -c Release -o $OutputDir --nologo -v quiet 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet build of the downgraded copy failed:`n$($log -join "`n")"
+        }
+    } finally {
+        # restore the tracked version file no matter what
+        [IO.File]::WriteAllText($versionFile, $original)
+    }
+    $exe = Join-Path $OutputDir 'DCSB.exe'
+    if (-not (Test-Path $exe)) { throw "the downgraded build did not produce $exe" }
+    return $exe
+}
+
+# Kills any process launched from the given installer path (its process name is
+# the file's base name). Used to make sure the elevated installer the app tries
+# to launch never lingers or installs anything.
+function Stop-DcsbInstallerProcess {
+    param([Parameter(Mandatory)] [string]$InstallerPath)
+    $name = [IO.Path]::GetFileNameWithoutExtension($InstallerPath)
+    foreach ($p in Get-Process -Name $name -ErrorAction SilentlyContinue) {
+        try {
+            if ($p.Path -eq $InstallerPath) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+        } catch {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 # ---------- assertions / result reporting ----------
