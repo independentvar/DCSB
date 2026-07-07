@@ -17,6 +17,7 @@
         <Converters:VolumeIconConverter x:Key="volumeIconConverter" />
         <Converters:VKeysToStringConverter x:Key="vKeysToStringConverter" />
         <Converters:StringToVisibilityConverter x:Key="stringToVisibilityConverter" />
+        <Converters:DurationConverter x:Key="durationConverter" />
     </UserControl.Resources>
 
     <DockPanel>
@@ -182,6 +183,9 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Duration"
+                                    IsReadOnly="True"
+                                    Binding="{Binding Duration, Converter={StaticResource durationConverter}}" />
             </DataGrid.Columns>
         </DataGrid>
 
