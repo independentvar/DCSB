@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Xml.Serialization;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
@@ -77,6 +79,22 @@ namespace DCSB.Models
             }
         }
 
+        // Reads a sound file's playback length. Wired up at startup by the app layer,
+        // because the audio decoders live in a higher layer than this model.
+        public static Func<string, TimeSpan?> DurationProvider;
+
+        private TimeSpan? _duration;
+        [XmlIgnore]
+        public TimeSpan? Duration
+        {
+            get { return _duration; }
+            private set
+            {
+                _duration = value;
+                OnPropertyChanged("Duration");
+            }
+        }
+
         public Sound()
         {
             _keys = new ObservableCollection<VKey>();
@@ -85,6 +103,7 @@ namespace DCSB.Models
             _keys.CollectionChanged += (sender, e) => OnPropertyChanged("Keys");
             _files.CollectionChanged += (sender, e) => OnPropertyChanged("Files");
             _files.CollectionChanged += (sender, e) => ValidateFiles();
+            _files.CollectionChanged += (sender, e) => RecalculateDuration();
 
             Volume = 100;
         }
@@ -112,6 +131,32 @@ namespace DCSB.Models
             {
                 Error = string.Format("Following files do not exist:\n{0}", string.Join("\n", missing_files));
             }
+        }
+
+        // Reads the duration off the UI thread so populating a large sound list
+        // (or editing a sound's files) doesn't block on opening audio files.
+        // A sound plays one of its files at random, so the total length across all
+        // its files is shown. Files is snapshotted first because it can be edited
+        // on the UI thread while the background read runs.
+        private void RecalculateDuration()
+        {
+            Func<string, TimeSpan?> provider = DurationProvider;
+            List<string> files = Files.Where(File.Exists).ToList();
+            if (provider == null || files.Count == 0)
+            {
+                Duration = null;
+                return;
+            }
+            Task.Run(() =>
+            {
+                TimeSpan total = TimeSpan.Zero;
+                foreach (string file in files)
+                {
+                    TimeSpan? length = provider(file);
+                    if (length.HasValue) total += length.Value;
+                }
+                Duration = total;
+            });
         }
     }
 }

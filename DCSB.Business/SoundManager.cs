@@ -75,6 +75,14 @@ namespace DCSB.Business
             Overlap = configurationModel.Overlap;
         }
 
+        // Reads a sound file's playback length without playing it; used to show
+        // durations in the UI. Static because it opens and disposes its own reader
+        // and needs no output device.
+        public static TimeSpan? GetDuration(string file)
+        {
+            return AudioMetadata.GetDuration(file);
+        }
+
         public void Play(Sound sound)
         {
             if (sound.Files.Count == 0)
