@@ -115,6 +115,55 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesPerPresetOverlayGeometry()
+        {
+            ConfigurationModel model = new ConfigurationModel();
+            model.PresetCollection.Add(new Preset
+            {
+                Name = "Boss rush",
+                OverlayPositionX = 0.25,
+                OverlayPositionY = 0.1,
+                OverlayWidth = 640,
+                OverlayHeight = 72,
+                OverlayCustomized = true
+            });
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Preset loadedPreset = loaded.PresetCollection[0];
+            Assert.AreEqual(0.25, loadedPreset.OverlayPositionX);
+            Assert.AreEqual(0.1, loadedPreset.OverlayPositionY);
+            Assert.AreEqual(640, loadedPreset.OverlayWidth);
+            Assert.AreEqual(72, loadedPreset.OverlayHeight);
+            Assert.IsTrue(loadedPreset.OverlayCustomized);
+        }
+
+        [TestMethod]
+        public void Deserialize_PresetWithoutOverlayElements_UsesDefaults()
+        {
+            // presets written before per-preset overlay geometry existed have no
+            // overlay elements; each must default to a centred 520x56 box
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel>" +
+                "<PresetCollection><Preset><Name>Old</Name></Preset></PresetCollection>" +
+                "</ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Preset preset = loaded.PresetCollection[0];
+            Assert.AreEqual("Old", preset.Name);
+            Assert.AreEqual(0.5, preset.OverlayPositionX);
+            Assert.AreEqual(0.0, preset.OverlayPositionY);
+            Assert.AreEqual(520, preset.OverlayWidth);
+            Assert.AreEqual(56, preset.OverlayHeight);
+            // not customized, so the live overlay uses the automatic content-sized bar
+            Assert.IsFalse(preset.OverlayCustomized);
+        }
+
+        [TestMethod]
         public void RoundTrip_DoesNotSerializeXmlIgnoredSelectedPreset()
         {
             ConfigurationModel model = new ConfigurationModel();

@@ -11,8 +11,13 @@
              d:DesignWidth="400">
 
     <UserControl.Resources>
-        <Converters:VolumeIconConverter x:Key="volumeIconConverter" />
-        
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DCSB.Views;component/Styles/ModernControls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Converters:VolumeIconConverter x:Key="volumeIconConverter" />
+
         <Style x:Key="ListItem" TargetType="{x:Type ListBoxItem}" >
             <Setter Property="Template">
                 <Setter.Value>
@@ -25,8 +30,9 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
-    
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <GroupBox Header="Overlap">

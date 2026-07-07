@@ -48,6 +48,17 @@ namespace DCSB.Models
             }
         }
 
+        private bool _overlayEditOpened;
+        public bool OverlayEditOpened
+        {
+            get { return _overlayEditOpened; }
+            set
+            {
+                _overlayEditOpened = value;
+                OnPropertyChanged("OverlayEditOpened");
+            }
+        }
+
         private IBindable _modifiedBindable;
         public IBindable ModifiedBindable
         {

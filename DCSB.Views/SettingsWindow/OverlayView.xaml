@@ -36,6 +36,15 @@
                                 Value="{Binding ConfigurationModel.OverlayOpacity}" />
                     </DockPanel>
 
+                    <Button Margin="5,0,5,5"
+                            HorizontalAlignment="Left"
+                            Padding="10,3"
+                            IsEnabled="{Binding ConfigurationModel.OverlayEnabled}"
+                            Command="{Binding OpenOverlayEditCommand}"
+                            ToolTip="Open a simplified preview of the overlay that you can drag to reposition and resize by its bottom-right corner.">
+                        Adjust position &amp; size…
+                    </Button>
+
                     <TextBlock Margin="5,5,5,5"
                                TextWrapping="Wrap"
                                Foreground="Gray">

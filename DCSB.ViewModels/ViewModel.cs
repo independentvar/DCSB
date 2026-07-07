@@ -501,6 +501,15 @@ namespace DCSB.ViewModels
             _applicationStateModel.AboutOpened = true;
         }
 
+        public ICommand OpenOverlayEditCommand
+        {
+            get { return new RelayCommand(OpenOverlayEdit); }
+        }
+        private void OpenOverlayEdit()
+        {
+            _applicationStateModel.OverlayEditOpened = true;
+        }
+
         public ICommand OpenNotAdministratorCommand
         {
             get { return new RelayCommand(OpenNotAdministrator); }

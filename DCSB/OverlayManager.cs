@@ -29,13 +29,13 @@ namespace DCSB
             bool enabled = _viewModel.ConfigurationModel.OverlayEnabled
                 && (enable == DisplayOption.Sounds || enable == DisplayOption.Both);
 
-            if (enabled && FullscreenDetector.TryGetFullscreenAppBounds(out int left, out int top, out int width, out _))
+            if (enabled && FullscreenDetector.TryGetFullscreenAppBounds(out int left, out int top, out int width, out int height))
             {
                 if (_window == null)
                 {
                     _window = new OverlayWindow { DataContext = _viewModel };
                 }
-                _window.ShowOver(left, top, width);
+                _window.ShowOver(left, top, width, height);
             }
             else if (_window != null && _window.IsVisible)
             {
