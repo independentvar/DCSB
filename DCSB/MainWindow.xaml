@@ -31,7 +31,10 @@
                                                Open="{Binding ApplicationStateModel.CounterOpened, Mode=TwoWay}"
                                                DataContext="{Binding}" />
         <Interactivity:OpenCloseWindowBehavior WindowType="local:AboutWindow"
-                                               Open="{Binding ApplicationStateModel.AboutOpened, Mode=TwoWay}" 
+                                               Open="{Binding ApplicationStateModel.AboutOpened, Mode=TwoWay}"
+                                               DataContext="{Binding}" />
+        <Interactivity:OpenCloseWindowBehavior WindowType="local:OverlayEditWindow"
+                                               Open="{Binding ApplicationStateModel.OverlayEditOpened, Mode=TwoWay}"
                                                DataContext="{Binding}" />
     </i:Interaction.Behaviors>
 

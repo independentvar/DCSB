@@ -14,68 +14,151 @@
         ShowActivated="False"
         Focusable="False"
         IsHitTestVisible="False"
-        ResizeMode="NoResize"
-        SizeToContent="Height">
+        ResizeMode="NoResize">
 
     <Window.Resources>
         <Converters:VKeysToStringConverter x:Key="vKeysToStringConverter" />
         <Converters:PercentToOpacityConverter x:Key="percentToOpacityConverter" />
+
+        <!-- shared by the live overlay and the edit preview so both render the
+             sounds identically -->
+        <ItemsPanelTemplate x:Key="SoundWrapPanel">
+            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+        </ItemsPanelTemplate>
+
+        <DataTemplate x:Key="SoundChipTemplate">
+            <StackPanel Orientation="Horizontal" Margin="8,3">
+                <StackPanel.Style>
+                    <Style TargetType="{x:Type StackPanel}">
+                        <Style.Triggers>
+                            <!-- a sound without keys cannot be triggered from a game -->
+                            <DataTrigger Binding="{Binding Keys.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <Border Background="#FF5865F2"
+                        CornerRadius="3"
+                        Padding="5,1"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Keys, Converter={StaticResource vKeysToStringConverter}}"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               FontSize="12" />
+                </Border>
+                <TextBlock Text="{Binding Name}"
+                           Foreground="White"
+                           FontSize="13"
+                           Margin="6,0,0,0"
+                           MaxWidth="180"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
     </Window.Resources>
 
-    <Border HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            Background="#D9202225"
-            CornerRadius="0,0,8,8"
-            Padding="12,4"
-            Opacity="{Binding ConfigurationModel.OverlayOpacity, Converter={StaticResource percentToOpacityConverter}}">
-        <Border.Style>
-            <Style TargetType="{x:Type Border}">
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding ConfigurationModel.SelectedPreset.SoundCollection.Count}" Value="0">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Border.Style>
+    <Grid>
+        <!-- ===================== LIVE overlay ===================== -->
+        <!-- Fills the window, which the OverlayManager sizes/positions from the
+             saved overlay geometry; the sound list wraps and centres inside. -->
+        <Border x:Name="LiveRoot"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                ClipToBounds="True"
+                Background="#D9202225"
+                CornerRadius="8"
+                Padding="12,4"
+                Opacity="{Binding ConfigurationModel.OverlayOpacity, Converter={StaticResource percentToOpacityConverter}}">
+            <Border.Style>
+                <Style TargetType="{x:Type Border}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ConfigurationModel.SelectedPreset.SoundCollection.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
 
-        <ItemsControl ItemsSource="{Binding ConfigurationModel.SelectedPreset.SoundCollection}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="8,3">
-                        <StackPanel.Style>
-                            <Style TargetType="{x:Type StackPanel}">
-                                <Style.Triggers>
-                                    <!-- a sound without keys cannot be triggered from a game -->
-                                    <DataTrigger Binding="{Binding Keys.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <Border Background="#FF5865F2"
-                                CornerRadius="3"
-                                Padding="5,1"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Keys, Converter={StaticResource vKeysToStringConverter}}"
-                                       Foreground="White"
-                                       FontWeight="Bold"
-                                       FontSize="12" />
-                        </Border>
-                        <TextBlock Text="{Binding Name}"
-                                   Foreground="White"
-                                   FontSize="13"
-                                   Margin="6,0,0,0"
-                                   MaxWidth="180"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </Border>
+            <ItemsControl ItemsSource="{Binding ConfigurationModel.SelectedPreset.SoundCollection}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          ItemsPanel="{StaticResource SoundWrapPanel}"
+                          ItemTemplate="{StaticResource SoundChipTemplate}" />
+        </Border>
+
+        <!-- ===================== EDIT chrome ===================== -->
+        <!-- Only shown when the window is opened in edit mode. Draggable/resizable
+             preview showing the user's real sounds and key bindings. -->
+        <Border x:Name="EditRoot"
+                Visibility="Collapsed"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                ClipToBounds="True"
+                Background="#F2202225"
+                BorderBrush="#FF5865F2"
+                BorderThickness="1.5"
+                CornerRadius="8">
+            <Grid>
+                <!-- the actual configured sounds, centred like the real overlay -->
+                <ItemsControl x:Name="EditSounds"
+                              ItemsSource="{Binding ConfigurationModel.SelectedPreset.SoundCollection}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              ItemsPanel="{StaticResource SoundWrapPanel}"
+                              ItemTemplate="{StaticResource SoundChipTemplate}" />
+
+                <!-- shown only when there are no sounds to preview -->
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#80FFFFFF" FontSize="12" FontStyle="Italic"
+                           Text="No sounds to preview">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ConfigurationModel.SelectedPreset.SoundCollection.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- instructions; names the preset because geometry is per-preset -->
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,3,0,0"
+                           Foreground="#B0FFFFFF" FontSize="10" TextAlignment="Center" TextWrapping="Wrap">
+                    <Run Text="Adjusting: " />
+                    <Run Text="{Binding ConfigurationModel.SelectedPreset.Name}" FontWeight="Bold" />
+                    <Run Text="  •  drag to move, drag the corner to resize" />
+                </TextBlock>
+
+                <!-- Reset (revert to automatic) + Done -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0">
+                    <Button x:Name="ResetButton" Content="Reset"
+                            Padding="8,1" FontSize="11" Cursor="Hand" Margin="0,0,4,0"
+                            ToolTip="Revert to the automatic size: a small bar centred at the top that fits all this preset's sounds." />
+                    <Button x:Name="DoneButton" Content="Done"
+                            Padding="8,1" FontSize="11" Cursor="Hand" />
+                </StackPanel>
+
+                <!-- resize grip (bottom-right corner) -->
+                <Thumb x:Name="ResizeGrip"
+                       Width="18" Height="18"
+                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                       Cursor="SizeNWSE">
+                    <Thumb.Template>
+                        <ControlTemplate TargetType="{x:Type Thumb}">
+                            <Grid Background="Transparent">
+                                <Path Stroke="#C0FFFFFF" StrokeThickness="1.5"
+                                      HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                      Margin="0,0,3,3"
+                                      Data="M 10 0 L 0 10  M 10 5 L 5 10  M 10 10 L 10 10" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Thumb.Template>
+                </Thumb>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

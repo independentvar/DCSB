@@ -10,10 +10,15 @@
              Width="500">
 
     <UserControl.Resources>
-        <Converters:StringFormatConverter x:Key="stringFormatConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DCSB.Views;component/Styles/ModernControls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Converters:StringFormatConverter x:Key="stringFormatConverter" />
+        </ResourceDictionary>
     </UserControl.Resources>
-    
-    <Grid>
+
+    <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition />
