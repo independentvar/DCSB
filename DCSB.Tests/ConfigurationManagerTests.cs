@@ -193,6 +193,51 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void Load_WithoutConfigFile_LeavesSetupIncompleteForWizard()
+        {
+            // brand-new install: the setup wizard should run once
+            ConfigurationModel loaded = new ConfigurationManager(_configDirectory).Load();
+
+            Assert.IsFalse(loaded.SetupCompleted);
+        }
+
+        [TestMethod]
+        public void Load_WithPreWizardConfig_MarksSetupCompletedSoWizardNeverShows()
+        {
+            // a config written before the wizard existed has no <SetupCompleted> element,
+            // which is exactly what saving a model with the flag unspecified produces
+            Save(new ConfigurationModel { Volume = 30 });
+
+            ConfigurationModel loaded = new ConfigurationManager(_configDirectory).Load();
+
+            Assert.IsTrue(loaded.SetupCompleted, "existing users must be migrated to completed");
+        }
+
+        [TestMethod]
+        public void Load_AfterFirstRunSaveWithoutCompleting_StillShowsWizard()
+        {
+            // first launch persists config (element written as false) before the user
+            // finishes the wizard; it must keep showing until actually completed
+            ConfigurationModel fresh = new ConfigurationManager(_configDirectory).Load();
+            Assert.IsFalse(fresh.SetupCompleted);
+            Save(fresh);
+
+            ConfigurationModel reloaded = new ConfigurationManager(_configDirectory).Load();
+
+            Assert.IsFalse(reloaded.SetupCompleted);
+        }
+
+        [TestMethod]
+        public void Load_AfterCompletingWizard_DoesNotShowAgain()
+        {
+            ConfigurationModel fresh = new ConfigurationManager(_configDirectory).Load();
+            fresh.SetupCompleted = true;
+            Save(fresh);
+
+            Assert.IsTrue(new ConfigurationManager(_configDirectory).Load().SetupCompleted);
+        }
+
+        [TestMethod]
         public void Load_WithCorruptConfigFile_ReturnsDefaultsAndMovesFileAside()
         {
             Directory.CreateDirectory(_configDirectory);

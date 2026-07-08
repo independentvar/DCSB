@@ -31,6 +31,7 @@ namespace DCSB.ViewModels
         private KeyboardInput _keyboardInput;
 
         private PresetConfigurationViewModel _presetConfigurationViewModel;
+        private WizardViewModel _wizardViewModel;
 
         private double _previousVolume;
         private double _previousPrimaryVolume;
@@ -64,6 +65,7 @@ namespace DCSB.ViewModels
             _updateManager = new UpdateManager();
 
             _presetConfigurationViewModel = new PresetConfigurationViewModel(_applicationStateModel, _configurationModel);
+            _wizardViewModel = new WizardViewModel(this, _configurationModel, _soundManager);
 
             _configurationModel.PropertyChanged += (sender, e) => _configurationManager.Save((ConfigurationModel)sender);
 
@@ -258,6 +260,11 @@ namespace DCSB.ViewModels
         public PresetConfigurationViewModel PresetConfigurationViewModel
         {
             get { return _presetConfigurationViewModel; }
+        }
+
+        public WizardViewModel WizardViewModel
+        {
+            get { return _wizardViewModel; }
         }
 
         public GridLength CountersWidth
@@ -519,6 +526,15 @@ namespace DCSB.ViewModels
         private void OpenSettings()
         {
             _applicationStateModel.SettingsOpened = true;
+        }
+
+        public ICommand OpenWizardCommand
+        {
+            get { return new RelayCommand(OpenWizard); }
+        }
+        private void OpenWizard()
+        {
+            _applicationStateModel.WizardOpened = true;
         }
 
         public ICommand OpenCounterCommand

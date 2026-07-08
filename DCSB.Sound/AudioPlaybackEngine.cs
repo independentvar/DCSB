@@ -19,8 +19,14 @@ namespace DCSB.SoundPlayer
         private readonly WasapiOut _outputDevice;
         private readonly MixingSampleProvider _mixer;
         private readonly VolumeSampleProvider _masterVolume;
+        private readonly MeteringSampleProvider _meter;
         private readonly PausableSampleProvider _soundBranch;
         private readonly MixingSampleProvider _outputMixer;
+
+        // peak amplitude (0..1) of the sounds leaving this engine (post master volume),
+        // raised on the render thread a few dozen times per second; drives the setup
+        // wizard's per-output level meter. Mirrors MicrophoneInput.LevelChanged.
+        public event EventHandler<float> LevelChanged;
 
         // persistent microphone input on the output mixer; unlike sounds it is not
         // affected by Stop/Pause or the master volume (turning game sounds down must
@@ -99,13 +105,34 @@ namespace DCSB.SoundPlayer
             // them, so stopping/pausing/muting sounds can never interrupt the voice
             _mixer = new MixingSampleProvider(format) { ReadFully = true };
             _masterVolume = new VolumeSampleProvider(_mixer);
-            _soundBranch = new PausableSampleProvider(_masterVolume);
+            // meter the sounds right after the master volume: the output mixer pulls the
+            // sound branch continuously (ReadFully), so StreamVolume fires steadily and
+            // reports ~0 when idle and the real peak while a sound plays
+            _meter = new MeteringSampleProvider(_masterVolume, format.SampleRate / 25);
+            _meter.StreamVolume += OnStreamVolume;
+            _soundBranch = new PausableSampleProvider(_meter);
             _outputMixer = new MixingSampleProvider(format) { ReadFully = true };
             _outputMixer.AddMixerInput(_soundBranch);
 
             _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, 100);
             _outputDevice.Init(_outputMixer);
             _outputDevice.Play();
+        }
+
+        private void OnStreamVolume(object sender, StreamVolumeEventArgs e)
+        {
+            EventHandler<float> handler = LevelChanged;
+            if (handler == null)
+            {
+                return;
+            }
+
+            float peak = 0f;
+            foreach (float channelPeak in e.MaxSampleValues)
+            {
+                if (channelPeak > peak) peak = channelPeak;
+            }
+            handler(this, Math.Min(peak, 1f));
         }
 
         public void PlaySound(string fileName, float volume, bool loop)

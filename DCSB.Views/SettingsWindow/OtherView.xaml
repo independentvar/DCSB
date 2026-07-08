@@ -30,6 +30,18 @@
                 <CheckBox IsChecked="{Binding ConfigurationModel.MinimizeToTray}">Minimize to tray</CheckBox>
             </GroupBox>
 
+            <GroupBox Header="Setup">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap"
+                               Margin="0,0,0,6"
+                               Text="Walk through configuring the virtual cable, audio routing and microphone, and verify that Discord will hear your sounds." />
+                    <Button Content="Run setup wizard"
+                            Command="{Binding OpenWizardCommand}"
+                            HorizontalAlignment="Left"
+                            Padding="10,3" />
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="Backup &amp; Restore">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap"
