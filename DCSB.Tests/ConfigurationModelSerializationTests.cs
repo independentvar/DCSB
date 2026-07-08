@@ -87,6 +87,38 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesMicrophoneSettings()
+        {
+            ConfigurationModel model = new ConfigurationModel
+            {
+                MicrophoneInput = "Headset Microphone",
+                MicrophoneVolume = 150
+            };
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.AreEqual("Headset Microphone", loaded.MicrophoneInput);
+            Assert.AreEqual(150, loaded.MicrophoneVolume);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutMicrophoneElements_UsesDefaults()
+        {
+            // configs written by older versions have no microphone elements; the
+            // microphone must stay disabled (no capture without opting in) at unity gain
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.IsNull(loaded.MicrophoneInput);
+            Assert.AreEqual(100, loaded.MicrophoneVolume);
+        }
+
+        [TestMethod]
         public void RoundTrip_PreservesOverlaySettings()
         {
             ConfigurationModel model = new ConfigurationModel { OverlayEnabled = false, OverlayOpacity = 40 };

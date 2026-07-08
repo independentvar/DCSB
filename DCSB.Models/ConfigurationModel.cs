@@ -72,6 +72,31 @@ namespace DCSB.Models
             }
         }
 
+        // capture device mixed into the secondary output; null/absent (older configs)
+        // means disabled, so existing setups keep working unchanged
+        private string _microphoneInput;
+        public string MicrophoneInput
+        {
+            get { return _microphoneInput; }
+            set
+            {
+                _microphoneInput = value;
+                OnPropertyChanged("MicrophoneInput");
+            }
+        }
+
+        // 0-200: values above 100 boost a quiet microphone
+        private int _microphoneVolume;
+        public int MicrophoneVolume
+        {
+            get { return _microphoneVolume; }
+            set
+            {
+                _microphoneVolume = value;
+                OnPropertyChanged("MicrophoneVolume");
+            }
+        }
+
         private double _windowWidth;
         public double WindowWidth
         {
@@ -254,6 +279,7 @@ namespace DCSB.Models
             Volume = 100;
             PrimaryDeviceVolume = 100;
             SecondaryDeviceVolume = 100;
+            MicrophoneVolume = 100;
             WindowHeight = 300;
             WindowWidth = 500;
             CountersWidth = 1;

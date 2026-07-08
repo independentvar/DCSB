@@ -83,6 +83,18 @@ namespace DCSB.ViewModels
             // compositing continuously even when the app idles behind a game
             _soundManager.PlaybackStarted += (sender, e) => RefreshSeekbarRendering();
 
+            // level meter for the settings page; LevelChanged arrives on the capture
+            // thread - WPF marshals PropertyChanged for scalar bindings itself
+            _soundManager.MicrophoneLevelChanged += (sender, level) =>
+            {
+                _microphoneLevel = level;
+                OnPropertyChanged("MicrophoneLevel");
+            };
+
+            // e.g. the microphone was unplugged - show the selection as Disabled
+            // instead of failing silently
+            _soundManager.MicrophoneFailed += (sender, e) => MicrophoneInput = DCSB.SoundPlayer.MicrophoneInput.DisabledDeviceName;
+
             // while a sound plays covered/minimized, no window event fires when the
             // cover goes away (e.g. the game closes); retry once a second until the
             // seekbar is visible again or playback ends
@@ -362,6 +374,46 @@ namespace DCSB.ViewModels
                 _configurationModel.SecondaryOutput = selectedDeviceName;
                 OnPropertyChanged("SecondaryOutput");
             }
+        }
+
+        public ICollection<string> AvailableInputs
+        {
+            get { return _soundManager.EnumerateInputDevices(); }
+        }
+
+        public string MicrophoneInput
+        {
+            get
+            {
+                return _configurationModel.MicrophoneInput;
+            }
+            set
+            {
+                string selectedDeviceName = _soundManager.ChangeMicrophoneInput(value);
+                _configurationModel.MicrophoneInput = selectedDeviceName;
+                _microphoneLevel = 0;
+                OnPropertyChanged("MicrophoneInput");
+                OnPropertyChanged("MicrophoneLevel");
+            }
+        }
+
+        public double MicrophoneVolume
+        {
+            get { return _configurationModel.MicrophoneVolume; }
+            set
+            {
+                _configurationModel.MicrophoneVolume = (int)value;
+                _soundManager.MicrophoneVolume = _configurationModel.MicrophoneVolume / 100f;
+                OnPropertyChanged("MicrophoneVolume");
+            }
+        }
+
+        // peak of the captured microphone signal (0..1); lets the user see in the
+        // settings that their voice is actually being picked up
+        private float _microphoneLevel;
+        public double MicrophoneLevel
+        {
+            get { return _microphoneLevel; }
         }
 
         public Visibility NotAdministrator

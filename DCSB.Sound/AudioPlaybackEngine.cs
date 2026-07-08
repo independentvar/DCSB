@@ -19,6 +19,14 @@ namespace DCSB.SoundPlayer
         private readonly WasapiOut _outputDevice;
         private readonly MixingSampleProvider _mixer;
         private readonly VolumeSampleProvider _masterVolume;
+        private readonly PausableSampleProvider _soundBranch;
+        private readonly MixingSampleProvider _outputMixer;
+
+        // persistent microphone input on the output mixer; unlike sounds it is not
+        // affected by Stop/Pause or the master volume (turning game sounds down must
+        // not quiet the user's voice in their call)
+        private ISampleProvider _microphoneMixerInput;
+        private VolumeSampleProvider _microphoneVolume;
 
         private int _volumePowBase = 100;
 
@@ -51,7 +59,7 @@ namespace DCSB.SoundPlayer
             }
         }
 
-        // true while the tracked sound is actually progressing (device not paused,
+        // true while the tracked sound is actually progressing (sounds not paused,
         // sound not yet finished); the device itself keeps "playing" silence even
         // with no inputs, hence the reader check
         public bool IsPlaying
@@ -59,7 +67,8 @@ namespace DCSB.SoundPlayer
             get
             {
                 SampleReader reader = _currentReader;
-                return reader != null && !reader.IsDisposed && _outputDevice.PlaybackState == PlaybackState.Playing;
+                return reader != null && !reader.IsDisposed && !_soundBranch.IsPaused
+                    && _outputDevice.PlaybackState == PlaybackState.Playing;
             }
         }
 
@@ -83,11 +92,19 @@ namespace DCSB.SoundPlayer
             // the app and the device (avoids crackling with virtual cables, see issue #154)
             WaveFormat mixFormat = device.AudioClient.MixFormat;
             int channels = Math.Min(mixFormat.Channels, 2);
-            _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(mixFormat.SampleRate, channels)) { ReadFully = true };
+            WaveFormat format = WaveFormat.CreateIeeeFloatWaveFormat(mixFormat.SampleRate, channels);
+
+            // two-stage graph: sounds mix in _mixer and pass through the master volume
+            // and the pause switch; the microphone joins at _outputMixer, past all of
+            // them, so stopping/pausing/muting sounds can never interrupt the voice
+            _mixer = new MixingSampleProvider(format) { ReadFully = true };
             _masterVolume = new VolumeSampleProvider(_mixer);
+            _soundBranch = new PausableSampleProvider(_masterVolume);
+            _outputMixer = new MixingSampleProvider(format) { ReadFully = true };
+            _outputMixer.AddMixerInput(_soundBranch);
 
             _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, 100);
-            _outputDevice.Init(_masterVolume);
+            _outputDevice.Init(_outputMixer);
             _outputDevice.Play();
         }
 
@@ -117,23 +134,27 @@ namespace DCSB.SoundPlayer
             AddMixerInput(reader, volume);
             _currentReader = reader;
 
+            // starting a new sound resumes paused ones, matching the old behavior of
+            // restarting the paused output device
+            _soundBranch.IsPaused = false;
+
             if (_outputDevice.PlaybackState != PlaybackState.Playing)
             {
                 _outputDevice.Play();
             }
         }
 
+        // pause/continue silence the sound branch instead of pausing the output
+        // device, so a microphone input keeps flowing while sounds are paused
         public void Pause()
         {
-            if (_outputDevice.PlaybackState == PlaybackState.Playing)
-            {
-                _outputDevice.Pause();
-            }
+            _soundBranch.IsPaused = true;
         }
 
         public void Continue()
         {
-            if (_outputDevice.PlaybackState == PlaybackState.Paused)
+            _soundBranch.IsPaused = false;
+            if (_outputDevice.PlaybackState != PlaybackState.Playing)
             {
                 _outputDevice.Play();
             }
@@ -143,7 +164,50 @@ namespace DCSB.SoundPlayer
         {
             _currentReader = null;
             _mixer.RemoveAllMixerInputs();
-            _outputDevice.Stop();
+            _soundBranch.IsPaused = false;
+            if (_microphoneMixerInput == null)
+            {
+                _outputDevice.Stop();
+            }
+        }
+
+        // Attaches a continuous microphone stream as a persistent input of the output
+        // mixer. Volume is a linear gain (1 = unity); values above 1 boost a quiet
+        // microphone, and the exponential sound volume curve does not apply.
+        public void SetMicrophoneInput(ISampleProvider micSource, float micVolume)
+        {
+            RemoveMicrophoneInput();
+
+            ISampleProvider convertedInput = ConvertToRightSampleRate(ConvertToRightChannelCount(micSource));
+            _microphoneVolume = new VolumeSampleProvider(convertedInput) { Volume = micVolume };
+            _microphoneMixerInput = _microphoneVolume;
+            _outputMixer.AddMixerInput(_microphoneMixerInput);
+
+            if (_outputDevice.PlaybackState != PlaybackState.Playing)
+            {
+                _outputDevice.Play();
+            }
+        }
+
+        public void RemoveMicrophoneInput()
+        {
+            if (_microphoneMixerInput != null)
+            {
+                _outputMixer.RemoveMixerInput(_microphoneMixerInput);
+                _microphoneMixerInput = null;
+                _microphoneVolume = null;
+            }
+        }
+
+        public float MicrophoneVolume
+        {
+            set
+            {
+                if (_microphoneVolume != null)
+                {
+                    _microphoneVolume.Volume = value;
+                }
+            }
         }
 
         private ISampleProvider ConvertToRightChannelCount(ISampleProvider input)
