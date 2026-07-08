@@ -7,11 +7,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Threading;
 
 namespace DCSB.Models
 {
     public class Sound : ObservableObject, IBindable, ICloneable
     {
+        private SynchronizationContext _synchronizationContext;
+
         private string _name;
         public string Name
         {
@@ -97,6 +100,7 @@ namespace DCSB.Models
 
         public Sound()
         {
+            _synchronizationContext = SynchronizationContext.Current;
             _keys = new ObservableCollection<VKey>();
             _files = new ObservableCollection<string>();
 
@@ -140,11 +144,13 @@ namespace DCSB.Models
         // on the UI thread while the background read runs.
         private void RecalculateDuration()
         {
+            CaptureSynchronizationContext();
+
             Func<string, TimeSpan?> provider = DurationProvider;
             List<string> files = Files.Where(File.Exists).ToList();
             if (provider == null || files.Count == 0)
             {
-                Duration = null;
+                SetDuration(null);
                 return;
             }
             Task.Run(() =>
@@ -155,8 +161,31 @@ namespace DCSB.Models
                     TimeSpan? length = provider(file);
                     if (length.HasValue) total += length.Value;
                 }
-                Duration = total;
+                SetDuration(total);
             });
+        }
+
+        private void SetDuration(TimeSpan? duration)
+        {
+            SynchronizationContext synchronizationContext = CaptureSynchronizationContext();
+
+            if (synchronizationContext != null && SynchronizationContext.Current != synchronizationContext)
+            {
+                synchronizationContext.Post(_ => Duration = duration, null);
+                return;
+            }
+
+            Duration = duration;
+        }
+
+        private SynchronizationContext CaptureSynchronizationContext()
+        {
+            if (_synchronizationContext == null && SynchronizationContext.Current != null)
+            {
+                _synchronizationContext = SynchronizationContext.Current;
+            }
+
+            return _synchronizationContext;
         }
     }
 }

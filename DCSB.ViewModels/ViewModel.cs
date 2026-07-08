@@ -916,7 +916,7 @@ namespace DCSB.ViewModels
                 bindable.Keys.All(k => k == key || modifiers.Contains(k)));
         }
 
-        private static readonly string[] _supportedSoundExtensions = { ".wma", ".mp3", ".wav", ".ogg", ".m4a", ".aiff", ".flac" };
+        private static readonly string[] _supportedSoundExtensions = { ".wma", ".mp3", ".wav", ".ogg", ".m4a", ".aac", ".mp4", ".aiff", ".flac" };
 
         public ICommand DropSoundFilesCommand
         {
