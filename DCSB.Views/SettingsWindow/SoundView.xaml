@@ -128,6 +128,62 @@
                     </DockPanel>
                 </Grid>
             </GroupBox>
+
+            <GroupBox Header="Microphone">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <Label Grid.Column="0"
+                           Grid.Row="0">Input:</Label>
+                    <ComboBox Grid.Column="1"
+                              Grid.Row="0"
+                              Margin="3"
+                              ItemsSource="{Binding AvailableInputs}"
+                              SelectedItem="{Binding MicrophoneInput}" />
+
+                    <Label Grid.Column="0"
+                           Grid.Row="1"
+                           ToolTip="Values above 100 boost a quiet microphone">Volume:</Label>
+                    <Slider Grid.Column="1"
+                            Grid.Row="1"
+                            Margin="3"
+                            Maximum="200"
+                            IsMoveToPointEnabled="True"
+                            AutoToolTipPlacement="BottomRight"
+                            ToolTip="Values above 100 boost a quiet microphone"
+                            Value="{Binding MicrophoneVolume}" />
+
+                    <Label Grid.Column="0"
+                           Grid.Row="2">Level:</Label>
+                    <ProgressBar Grid.Column="1"
+                                 Grid.Row="2"
+                                 Margin="3"
+                                 Height="8"
+                                 VerticalAlignment="Center"
+                                 Maximum="1"
+                                 Value="{Binding MicrophoneLevel, Mode=OneWay}" />
+
+                    <TextBlock Grid.Column="1"
+                               Grid.Row="3"
+                               Margin="3"
+                               TextWrapping="Wrap"
+                               Opacity="0.7">
+                        The microphone is mixed with the sounds into the second output device.
+                        Pick a virtual cable (e.g. CABLE Input) as the second output and select
+                        the cable's recording device (e.g. CABLE Output) as the microphone in
+                        Discord or your game. Do not use "Listen to this device" in Windows.
+                    </TextBlock>
+                </Grid>
+            </GroupBox>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

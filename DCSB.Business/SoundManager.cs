@@ -10,6 +10,7 @@ namespace DCSB.Business
     {
         private AudioPlaybackEngine _primarySoundPlayer;
         private AudioPlaybackEngine _secondarySoundPlayer;
+        private MicrophoneInput _microphoneInput;
         private Random _random;
 
         private float _volume = 1f;
@@ -46,6 +47,20 @@ namespace DCSB.Business
             }
         }
 
+        // linear gain for the microphone leg (1 = unity, up to 2 to boost a quiet
+        // mic); deliberately independent of Volume/SecondaryDeviceVolume - muting
+        // the sounds must not mute the user's voice in their call
+        private float _microphoneVolume = 1f;
+        public float MicrophoneVolume
+        {
+            get { return _microphoneVolume; }
+            set
+            {
+                _microphoneVolume = value;
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.MicrophoneVolume = value;
+            }
+        }
+
         private bool _overlap;
         public bool Overlap
         {
@@ -62,12 +77,24 @@ namespace DCSB.Business
         // lets the UI run its seekbar updates only while something is playing
         public event EventHandler PlaybackStarted;
 
+        // raised when the microphone stops working mid-run (e.g. unplugged); the UI
+        // switches the microphone selection to Disabled so the failure is visible
+        public event EventHandler<Exception> MicrophoneFailed;
+
+        // peak level (0..1) of the captured microphone signal, raised from the
+        // capture thread ~40 times per second; drives the settings level meter
+        public event EventHandler<float> MicrophoneLevelChanged;
+
         public SoundManager(ConfigurationModel configurationModel)
         {
             _random = new Random();
 
+            // the microphone gain must be known before ChangeMicrophoneInput attaches the mic
+            _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
+
             configurationModel.PrimaryOutput = ChangePrimaryOutput(configurationModel.PrimaryOutput);
             configurationModel.SecondaryOutput = ChangeSecondaryOutput(configurationModel.SecondaryOutput);
+            configurationModel.MicrophoneInput = ChangeMicrophoneInput(configurationModel.MicrophoneInput);
 
             Volume = configurationModel.Volume / 100f;
             PrimaryDeviceVolume = configurationModel.PrimaryDeviceVolume / 100f;
@@ -218,7 +245,91 @@ namespace DCSB.Business
 
         public string ChangeSecondaryOutput(string deviceName)
         {
-            return ChangeDevice(deviceName, _secondaryDeviceVolume, false, ref _secondarySoundPlayer);
+            string selectedDeviceName = ChangeDevice(deviceName, _secondaryDeviceVolume, false, ref _secondarySoundPlayer);
+            // ChangeDevice rebuilt the engine, which lost its microphone input
+            AttachMicrophone();
+            return selectedDeviceName;
+        }
+
+        // Opens the requested capture device and mixes it into the secondary output
+        // only - the primary output is the user's own ears, so mixing the mic there
+        // would echo their voice back at them. Returns the selected device name,
+        // falling back to Disabled when the device is missing or cannot be opened
+        // (same policy as InstantiateDevice for outputs).
+        public string ChangeMicrophoneInput(string deviceName)
+        {
+            DisableMicrophone();
+
+            string resolvedName = MicrophoneInput.ResolveDeviceName(deviceName);
+            if (resolvedName == null)
+            {
+                return MicrophoneInput.DisabledDeviceName;
+            }
+
+            try
+            {
+                _microphoneInput = new MicrophoneInput(resolvedName);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                _microphoneInput = null;
+                return MicrophoneInput.DisabledDeviceName;
+            }
+
+            _microphoneInput.CaptureFailed += OnMicrophoneCaptureFailed;
+            _microphoneInput.LevelChanged += OnMicrophoneLevelChanged;
+            AttachMicrophone();
+
+            // AttachMicrophone disables the microphone when mixing it in fails
+            return _microphoneInput != null ? resolvedName : MicrophoneInput.DisabledDeviceName;
+        }
+
+        private void DisableMicrophone()
+        {
+            if (_microphoneInput != null)
+            {
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.RemoveMicrophoneInput();
+                _microphoneInput.Dispose();
+                _microphoneInput = null;
+            }
+        }
+
+        // capture keeps running even while the secondary output is disabled (the
+        // level meter still shows input); the mic is attached once both ends exist
+        private void AttachMicrophone()
+        {
+            if (_microphoneInput == null || _secondarySoundPlayer == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // drop audio captured while nothing was consuming the buffer, so the
+                // voice resumes live instead of replaying a backlog
+                _microphoneInput.Flush();
+                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, _microphoneVolume);
+            }
+            catch (Exception e)
+            {
+                // e.g. a microphone with more than two channels cannot be converted
+                Debug.WriteLine(e);
+                DisableMicrophone();
+                if (MicrophoneFailed != null) MicrophoneFailed(this, e);
+            }
+        }
+
+        private void OnMicrophoneCaptureFailed(object sender, Exception e)
+        {
+            Debug.WriteLine(e);
+            DisableMicrophone();
+            if (MicrophoneFailed != null) MicrophoneFailed(this, e);
+        }
+
+        private void OnMicrophoneLevelChanged(object sender, float level)
+        {
+            if (MicrophoneLevelChanged != null) MicrophoneLevelChanged(this, level);
         }
 
         public ICollection<string> EnumerateDevices()
@@ -226,11 +337,21 @@ namespace DCSB.Business
             return AudioPlaybackEngine.EnumerateDevices();
         }
 
+        public ICollection<string> EnumerateInputDevices()
+        {
+            return MicrophoneInput.EnumerateDevices();
+        }
+
         // Disposing the WASAPI engines stops their playback threads. NAudio's WasapiOut
         // render thread is a foreground thread, so leaving the engines alive keeps the
         // whole process running after the window closes.
         public void Dispose()
         {
+            if (_microphoneInput != null)
+            {
+                _microphoneInput.Dispose();
+                _microphoneInput = null;
+            }
             if (_primarySoundPlayer != null)
             {
                 _primarySoundPlayer.Dispose();
@@ -246,6 +367,7 @@ namespace DCSB.Business
 
         ~SoundManager()
         {
+            if (_microphoneInput != null) _microphoneInput.Dispose();
             if (_primarySoundPlayer != null) _primarySoundPlayer.Dispose();
             if (_secondarySoundPlayer != null) _secondarySoundPlayer.Dispose();
         }
