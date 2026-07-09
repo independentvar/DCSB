@@ -15,12 +15,18 @@ namespace DCSB.SoundPlayer
         public const string DefaultDeviceName = "Default Input Device";
 
         // small capture buffer keeps the voice latency low
-        private const int CaptureBufferMilliseconds = 25;
+        private const int CaptureBufferMilliseconds = 10;
 
         // upper bound on how much captured audio may pile up when the render side
         // stalls; overflow discards new data (a short glitch) instead of letting the
         // voice drift ever further behind or the buffer grow without limit
         private const int MaxBufferedMilliseconds = 250;
+
+        // if the backlog between capture and render exceeds this, drop it and
+        // resume live: a render stall (device rebuild, system hiccup) or capture/
+        // render clock drift must show up as a brief glitch, not as voice latency
+        // that ratchets up and stays for the rest of the session
+        private const int LatencyResetMilliseconds = 80;
 
         private readonly WasapiCapture _capture;
         private readonly BufferedWaveProvider _buffer;
@@ -67,6 +73,10 @@ namespace DCSB.SoundPlayer
 
         private void OnDataAvailable(object sender, WaveInEventArgs e)
         {
+            if (_buffer.BufferedDuration.TotalMilliseconds > LatencyResetMilliseconds)
+            {
+                _buffer.ClearBuffer();
+            }
             _buffer.AddSamples(e.Buffer, 0, e.BytesRecorded);
 
             if (LevelChanged != null)

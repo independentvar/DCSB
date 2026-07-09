@@ -16,6 +16,11 @@ namespace DCSB.SoundPlayer
         // WaveOut device names (used by older versions) were truncated to 31 characters
         private const int LegacyDeviceNameLength = 31;
 
+        // WASAPI shared-mode, event-driven output buffer; sets the floor of the
+        // microphone passthrough latency, so it must stay small - but not so small
+        // that cheap USB devices underrun (30 ms is safe there, 100 ms is not needed)
+        private const int OutputLatencyMilliseconds = 30;
+
         private readonly WasapiOut _outputDevice;
         private readonly MixingSampleProvider _mixer;
         private readonly VolumeSampleProvider _masterVolume;
@@ -114,7 +119,7 @@ namespace DCSB.SoundPlayer
             _outputMixer = new MixingSampleProvider(format) { ReadFully = true };
             _outputMixer.AddMixerInput(_soundBranch);
 
-            _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, 100);
+            _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, OutputLatencyMilliseconds);
             _outputDevice.Init(_outputMixer);
             _outputDevice.Play();
         }
