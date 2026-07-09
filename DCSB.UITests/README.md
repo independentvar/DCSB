@@ -51,6 +51,24 @@ machine).
 | `Test-SingleInstance` | Launching a second `DCSB.exe` exits it (single-instance mutex) and restores the minimized window of the already-running instance. |
 | `Test-UpdateCheck` | The full "update available" flow, incl. a **real** installer download. Builds a throwaway `v0.0.0.1` copy of the app (so it's out of date against the real release feed), runs it, verifies the "New version _X_ is available" offer names the actual newest GitHub release, clicks **Yes**, and confirms the newest release's installer really downloads to `%TEMP%` (matching size + PE header). The app then tries to launch that (admin) installer, so **a UAC prompt briefly appears and the screen dims** — the test kills the app right after the download to cancel that launch, so nothing is installed. Needs the .NET SDK (to build the copy). Skipped if the GitHub feed is unreachable, the newest release has no `.exe` asset, or `dotnet` is missing. |
 
+## Measurement tools
+
+`Measure-MicLatency.ps1` is a manual tool, not a pass/fail test (the
+`Measure-` prefix keeps it out of the runner's `Test-*.ps1` glob). It measures
+the microphone passthrough latency: a tone rendered into `CABLE Input` is
+timestamped on the cable's own peak meter and again on DCSB's secondary output
+endpoint; the difference is the app's mic-path latency, excluding the tone
+generator's buffering (but still including VB-Cable's internal hop and meter
+granularity — compare runs against each other rather than reading the number
+as absolute). Ten trials by default, reports per-trial values and the median.
+
+```powershell
+pwsh -File .\Measure-MicLatency.ps1 [-Trials 10]
+```
+
+For reference: the 10 ms capture / 30 ms output buffers measure ~69 ms median
+on VB-Cable; the pre-2026-07 100 ms output buffer measured ~141 ms.
+
 ## Safety around user state
 
 DCSB stores its config machine-wide at `%ProgramData%\DCSB\config.xml`. Every
