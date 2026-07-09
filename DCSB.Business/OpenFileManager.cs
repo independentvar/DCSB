@@ -70,7 +70,7 @@ namespace DCSB.Business
             OpenFileDialog fileDialog = new OpenFileDialog
             {
                 Title = "Choose sound file/s",
-                Filter = "sound files|*.wma;*.mp3;*.wav;*.ogg;*.m4a;*.aac;*.mp4;*.aiff;*.flac|all files (*.*)|*.*",
+                Filter = "sound files|*.wma;*.mp3;*.wav;*.ogg;*.oga;*.opus;*.m4a;*.aac;*.adts;*.mp4;*.aif;*.aiff;*.flac|all files (*.*)|*.*",
                 AddExtension = true,
                 RestoreDirectory = true,
                 Multiselect = true

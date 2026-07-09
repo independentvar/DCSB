@@ -65,6 +65,10 @@ namespace DCSB.SoundPlayer
 
         public void Dispose()
         {
+            if (IsDisposed)
+            {
+                return;
+            }
             _reader.Dispose();
             IsDisposed = true;
         }

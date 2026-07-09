@@ -16,6 +16,11 @@
     <PackageReference Include="Octokit" Version="14.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Binary Ogg identification pages are stored as base64 to keep diffs
+         reviewable, then copied beside the test assembly for sniffing tests. -->
+    <Content Include="Fixtures\*.base64" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\DCSB.Business\DCSB.Business.csproj" />
     <ProjectReference Include="..\DCSB.Converters\DCSB.Converters.csproj" />
     <ProjectReference Include="..\DCSB.Models\DCSB.Models.csproj" />
