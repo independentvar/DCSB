@@ -14,7 +14,9 @@ namespace DCSB.SoundPlayer
         public const string DisabledDeviceName = "Disabled";
         public const string DefaultDeviceName = "Default Input Device";
 
-        // small capture buffer keeps the voice latency low
+        // buffer for the stock WasapiCapture used when LowLatencyWasapiCapture
+        // (IAudioClient3, engine-minimum period) is unavailable; small, to keep
+        // the voice latency low even on the fallback path
         private const int CaptureBufferMilliseconds = 10;
 
         // upper bound on how much captured audio may pile up when the render side
@@ -28,7 +30,7 @@ namespace DCSB.SoundPlayer
         // that ratchets up and stays for the rest of the session
         private const int LatencyResetMilliseconds = 80;
 
-        private readonly WasapiCapture _capture;
+        private readonly IWaveIn _capture;
         private readonly BufferedWaveProvider _buffer;
         private bool _disposed;
 
@@ -50,7 +52,15 @@ namespace DCSB.SoundPlayer
                 throw new ArgumentException($"Input device '{deviceName}' was not found.", nameof(deviceName));
             }
 
-            _capture = new WasapiCapture(device, true, CaptureBufferMilliseconds);
+            try
+            {
+                _capture = new LowLatencyWasapiCapture(device);
+            }
+            catch (Exception)
+            {
+                // IAudioClient3 unavailable (pre-Win10, driver refusal, NAudio internals changed)
+                _capture = new WasapiCapture(device, true, CaptureBufferMilliseconds);
+            }
             _buffer = new BufferedWaveProvider(_capture.WaveFormat)
             {
                 BufferDuration = TimeSpan.FromMilliseconds(MaxBufferedMilliseconds),

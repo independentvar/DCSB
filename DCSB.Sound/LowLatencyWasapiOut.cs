@@ -68,7 +68,7 @@ namespace DCSB.SoundPlayer
                 Marshal.StructureToPtr(waveProvider.WaveFormat, formatPtr, false);
                 try
                 {
-                    IAudioClient3 client3 = GetAudioClient3(_audioClient);
+                    IAudioClient3 client3 = (IAudioClient3)AudioClient3Interop.GetComInterface(_audioClient);
                     uint defaultPeriod, fundamental, minPeriod, maxPeriod;
                     client3.GetSharedModeEnginePeriod(formatPtr, out defaultPeriod, out fundamental, out minPeriod, out maxPeriod);
                     client3.InitializeSharedAudioStream(StreamFlagsEventCallback, minPeriod, formatPtr, IntPtr.Zero);
@@ -204,17 +204,6 @@ namespace DCSB.SoundPlayer
             renderClient.ReleaseBuffer(frameCount, AudioClientBufferFlags.None);
         }
 
-        private static IAudioClient3 GetAudioClient3(AudioClient audioClient)
-        {
-            FieldInfo field = typeof(AudioClient).GetField("audioClientInterface", BindingFlags.NonPublic | BindingFlags.Instance);
-            object comObject = field != null ? field.GetValue(audioClient) : null;
-            if (comObject == null)
-            {
-                throw new NotSupportedException("NAudio's audioClientInterface field was not found.");
-            }
-            return (IAudioClient3)comObject; // QueryInterface; throws InvalidCastException when unsupported
-        }
-
         public void Dispose()
         {
             Stop();
@@ -228,6 +217,25 @@ namespace DCSB.SoundPlayer
                 _frameEvent.Dispose();
                 _frameEvent = null;
             }
+        }
+    }
+
+    // NAudio (2.3.0) keeps the raw IAudioClient COM object in a private field and
+    // offers no IAudioClient3 surface; digging it out lets the low-latency classes
+    // QueryInterface for IAudioClient3 while reusing NAudio's wrapper for the rest.
+    internal static class AudioClient3Interop
+    {
+        // returns the COM RCW; cast to IAudioClient3 performs the QueryInterface
+        // (InvalidCastException when the platform doesn't support it)
+        public static object GetComInterface(AudioClient audioClient)
+        {
+            FieldInfo field = typeof(AudioClient).GetField("audioClientInterface", BindingFlags.NonPublic | BindingFlags.Instance);
+            object comObject = field != null ? field.GetValue(audioClient) : null;
+            if (comObject == null)
+            {
+                throw new NotSupportedException("NAudio's audioClientInterface field was not found.");
+            }
+            return comObject;
         }
     }
 

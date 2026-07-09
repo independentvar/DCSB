@@ -68,10 +68,13 @@ pwsh -File .\Measure-MicLatency.ps1 [-Trials 10]
 
 For reference (cable-as-mic → Steam Streaming Speakers): the pre-2026-07
 100 ms output buffer measured ~141 ms median; 30 ms WasapiOut ~69 ms; the
-IAudioClient3 output (engine-minimum period) ~57 ms. The granted period is
-per-device — Steam/NVIDIA endpoints give 480 frames (10 ms), VB-Cable gives
-128 frames (2.67 ms), so the real streamer topology (output = cable) runs
-faster than this probe's direction can show.
+IAudioClient3 output + capture (engine-minimum period) ~57 ms. The granted
+period is per-device and per-direction — Steam/NVIDIA render endpoints and
+all capture endpoints on this machine give 480 frames (10 ms), while
+VB-Cable's render side gives 128 frames (2.67 ms) — so the real streamer
+topology (output = cable) runs faster than this probe's direction can show,
+and hardware microphones with inbox Win10+ drivers may capture faster than
+this machine's endpoints do.
 
 ## Safety around user state
 

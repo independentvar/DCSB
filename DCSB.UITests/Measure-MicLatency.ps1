@@ -87,6 +87,12 @@ try {
             continue
         }
         $latency = $tOut - $tCable
+        if ($latency -le 0) {
+            # output meter fired before the tone reached the cable: residue from the
+            # previous trial was still draining - discard, the wait was not enough
+            Write-Host ("trial {0}: DISCARDED, output peaked before the cable (cable={1:F1} out={2:F1})" -f ($t + 1), $tCable, $tOut)
+            continue
+        }
         $results += $latency
         Write-Host ("trial {0}: tone on cable at {1,7:F1} ms, on output at {2,7:F1} ms -> app latency {3,6:F1} ms" -f ($t + 1), $tCable, $tOut, $latency)
     }
