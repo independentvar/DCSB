@@ -86,6 +86,11 @@ namespace DCSB.Models
         // because the audio decoders live in a higher layer than this model.
         public static Func<string, TimeSpan?> DurationProvider;
 
+        // Warms the loudness cache used by volume normalization. Wired up at startup
+        // like DurationProvider and invoked from the same background pass, so every
+        // sound's files are measured before they are first played.
+        public static Action<string> LoudnessPrefetcher;
+
         private TimeSpan? _duration;
         [XmlIgnore]
         public TimeSpan? Duration
@@ -153,6 +158,7 @@ namespace DCSB.Models
                 SetDuration(null);
                 return;
             }
+            Action<string> prefetcher = LoudnessPrefetcher;
             Task.Run(() =>
             {
                 TimeSpan total = TimeSpan.Zero;
@@ -162,6 +168,16 @@ namespace DCSB.Models
                     if (length.HasValue) total += length.Value;
                 }
                 SetDuration(total);
+
+                // loudness runs after SetDuration: it decodes files in full, and the
+                // duration column should not wait on that
+                if (prefetcher != null)
+                {
+                    foreach (string file in files)
+                    {
+                        prefetcher(file);
+                    }
+                }
             });
         }
 

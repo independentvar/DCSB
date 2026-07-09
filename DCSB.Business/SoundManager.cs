@@ -3,6 +3,7 @@ using DCSB.SoundPlayer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace DCSB.Business
 {
@@ -13,6 +14,7 @@ namespace DCSB.Business
         private MicrophoneInput _microphoneInput;
         private MicrophoneInput _cableProbe;
         private Random _random;
+        private ConfigurationModel _configurationModel;
 
         private float _volume = 1f;
         public float Volume
@@ -62,6 +64,48 @@ namespace DCSB.Business
             }
         }
 
+        // when enabled, each clip gets a make-up gain toward a common loudness
+        // target so differently mastered files play equally loud; the flag also
+        // gates the background loudness prefetch so disabled installs don't
+        // decode every sound file for nothing
+        private bool _normalizeVolume;
+        public bool NormalizeVolume
+        {
+            get { return _normalizeVolume; }
+            set
+            {
+                bool wasEnabled = _normalizeVolume;
+                _normalizeVolume = value;
+                LoudnessNormalization.PrefetchEnabled = value;
+                if (value && !wasEnabled)
+                {
+                    // catch up on every already-configured file, so enabling the
+                    // feature (at startup from config, or mid-session from settings)
+                    // doesn't leave sounds unnormalized until their next play
+                    PrefetchAllSounds();
+                }
+            }
+        }
+
+        private void PrefetchAllSounds()
+        {
+            List<string> files = new List<string>();
+            foreach (Preset preset in _configurationModel.PresetCollection)
+            {
+                foreach (Sound sound in preset.SoundCollection)
+                {
+                    files.AddRange(sound.Files);
+                }
+            }
+            Task.Run(() =>
+            {
+                foreach (string file in files)
+                {
+                    LoudnessNormalization.Prefetch(file);
+                }
+            });
+        }
+
         private bool _overlap;
         public bool Overlap
         {
@@ -99,6 +143,7 @@ namespace DCSB.Business
         public SoundManager(ConfigurationModel configurationModel)
         {
             _random = new Random();
+            _configurationModel = configurationModel;
 
             // the microphone gain must be known before ChangeMicrophoneInput attaches the mic
             _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
@@ -111,6 +156,15 @@ namespace DCSB.Business
             PrimaryDeviceVolume = configurationModel.PrimaryDeviceVolume / 100f;
             SecondaryDeviceVolume = configurationModel.SecondaryDeviceVolume / 100f;
             Overlap = configurationModel.Overlap;
+            NormalizeVolume = configurationModel.NormalizeVolume;
+        }
+
+        // Measures and caches a sound file's loudness ahead of playback; wired as
+        // Sound.LoudnessPrefetcher so it runs during the same background pass that
+        // reads durations. Static for the same reason as GetDuration.
+        public static void PrefetchLoudness(string file)
+        {
+            LoudnessNormalization.Prefetch(file);
         }
 
         // Reads a sound file's playback length without playing it; used to show
@@ -129,10 +183,13 @@ namespace DCSB.Business
             }
 
             string file = sound.Files[_random.Next(sound.Files.Count)];
+            // unity while the file's loudness is still unmeasured (GetGain then
+            // kicks off the measurement, so the next play is normalized)
+            float normalizationGain = _normalizeVolume ? LoudnessNormalization.GetGain(file) : 1f;
             try
             {
-                if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop);
-                if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop);
+                if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
             }
             catch (Exception ex)
             {

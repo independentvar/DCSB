@@ -38,6 +38,14 @@
             <GroupBox Header="Overlap">
                 <CheckBox Margin="5" IsChecked="{Binding Overlap}">Overlap sounds</CheckBox>
             </GroupBox>
+
+            <GroupBox Header="Volume">
+                <CheckBox Margin="5"
+                          IsChecked="{Binding NormalizeVolume}"
+                          ToolTip="Measures each file's loudness (EBU R128) and plays quiet clips louder and loud clips quieter, so all sounds come out at a similar level. Per-sound volume sliders still apply on top.">
+                    Normalize volume across sounds
+                </CheckBox>
+            </GroupBox>
             
             <GroupBox Header="Output Devices">
                 <Grid>
