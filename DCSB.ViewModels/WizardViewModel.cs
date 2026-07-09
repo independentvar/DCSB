@@ -5,6 +5,7 @@ using DCSB.SoundPlayer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -234,6 +235,11 @@ namespace DCSB.ViewModels
             CableDetected = DetectedCableName != null;
             OnPropertyChanged("CableCaptureName");
 
+            // re-probed alongside the devices: the control panel appears on disk the
+            // moment the user installs VB-Cable mid-wizard
+            _cableControlPanelPath = FindCableControlPanel();
+            OnPropertyChanged("HasCableControlPanel");
+
             // devices may have appeared after a fresh VB-Cable install - refresh the
             // dropdowns' choices and re-evaluate whether Next is now allowed
             OnPropertyChanged("AvailableOutputs");
@@ -446,6 +452,72 @@ namespace DCSB.ViewModels
         public string CableCaptureName
         {
             get { return _cableCaptureName ?? "your virtual cable's output (e.g. CABLE Output)"; }
+        }
+
+        // VB-Cable's own control panel, where its internal latency ("Max Latency") can
+        // be lowered - the cable's buffering is the biggest remaining chunk of voice
+        // delay once DCSB itself runs at the OS minimum. Probed rather than hardcoded
+        // shown, so the tip's button only appears when it can actually work.
+        private string FindCableControlPanel()
+        {
+            Environment.SpecialFolder[] roots =
+            {
+                Environment.SpecialFolder.ProgramFiles,
+                Environment.SpecialFolder.ProgramFilesX86
+            };
+            foreach (Environment.SpecialFolder root in roots)
+            {
+                string folder = Environment.GetFolderPath(root);
+                if (string.IsNullOrEmpty(folder))
+                {
+                    continue;
+                }
+                string path = Path.Combine(folder, "VB", "CABLE", "VBCABLE_ControlPanel.exe");
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+            return null;
+        }
+
+        private string _cableControlPanelPath;
+        public bool HasCableControlPanel { get { return _cableControlPanelPath != null; } }
+
+        public ICommand OpenCableControlPanelCommand { get { return new RelayCommand(OpenCableControlPanel); } }
+        private void OpenCableControlPanel()
+        {
+            if (_cableControlPanelPath == null)
+            {
+                return;
+            }
+            ProcessStartInfo startInfo = new ProcessStartInfo(_cableControlPanelPath)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(_cableControlPanelPath),
+                // changing the cable's latency writes machine-wide driver settings,
+                // which silently fail without elevation - ask for it up front
+                Verb = "runas"
+            };
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                // UAC declined (or elevation unavailable): still open the panel
+                // read-only rather than doing nothing
+                Debug.WriteLine(e);
+                try
+                {
+                    startInfo.Verb = null;
+                    Process.Start(startInfo);
+                }
+                catch (Exception inner)
+                {
+                    Debug.WriteLine(inner);
+                }
+            }
         }
     }
 }

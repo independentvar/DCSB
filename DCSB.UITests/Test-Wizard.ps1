@@ -63,7 +63,8 @@ Invoke-UITest -Name 'Setup wizard first-run flow' -Body {
         $secondary = $null
         do {
             Start-Sleep -Milliseconds 400
-            $raw = Get-Content $script:ConfigPath -Raw
+            # the save replaces the file on disk, so it can be briefly absent/locked
+            try { $raw = Get-Content $script:ConfigPath -Raw -ErrorAction Stop } catch { continue }
             if ($raw -match '<SecondaryOutput>([^<]*)</SecondaryOutput>') { $secondary = $matches[1] }
         } while ($secondary -ne $cableRender -and (Get-Date) -lt $deadline)
         Assert-True ($secondary -eq $cableRender) `
@@ -92,10 +93,24 @@ Invoke-UITest -Name 'Setup wizard first-run flow' -Body {
         $verdict = Get-DialogText $wizard
         Assert-True ($verdict -like '*Discord*') "step 3 verdict should confirm success; saw: $verdict"
 
-        # step 4, then Finish
+        # step 4: cable-latency guidance (tip text always; the control panel button
+        # only when VBCABLE_ControlPanel.exe exists on disk - true wherever VB-Cable
+        # is installed, which this test already requires). The button is asserted,
+        # not clicked: launching the panel triggers a UAC prompt.
         Set-DcsbForeground $wizard
         Invoke-UIElement (Find-DescendantByName $wizard 'Next')
         Start-Sleep -Milliseconds 500
+        $step4Text = Get-DialogText $wizard
+        Assert-True ($step4Text -like '*reduce the cable*') "step 4 should show the latency tip; saw: $step4Text"
+        $controlPanelInstalled = (Test-Path 'C:\Program Files\VB\CABLE\VBCABLE_ControlPanel.exe') -or
+                                 (Test-Path 'C:\Program Files (x86)\VB\CABLE\VBCABLE_ControlPanel.exe')
+        $panelButton = Find-DescendantByName $wizard 'Open VB-Cable Control Panel...'
+        if ($controlPanelInstalled) {
+            Assert-True ($null -ne $panelButton) 'control panel button should be visible when VB-Cable is installed'
+        } else {
+            Assert-True ($null -eq $panelButton) 'control panel button should be hidden without VBCABLE_ControlPanel.exe'
+        }
+
         $finish = Find-DescendantByName $wizard 'Finish'
         Assert-True ($null -ne $finish) 'Finish button should exist on the last step'
         Invoke-UIElement $finish
