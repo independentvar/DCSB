@@ -66,8 +66,12 @@ as absolute). Ten trials by default, reports per-trial values and the median.
 pwsh -File .\Measure-MicLatency.ps1 [-Trials 10]
 ```
 
-For reference: the 10 ms capture / 30 ms output buffers measure ~69 ms median
-on VB-Cable; the pre-2026-07 100 ms output buffer measured ~141 ms.
+For reference (cable-as-mic → Steam Streaming Speakers): the pre-2026-07
+100 ms output buffer measured ~141 ms median; 30 ms WasapiOut ~69 ms; the
+IAudioClient3 output (engine-minimum period) ~57 ms. The granted period is
+per-device — Steam/NVIDIA endpoints give 480 frames (10 ms), VB-Cable gives
+128 frames (2.67 ms), so the real streamer topology (output = cable) runs
+faster than this probe's direction can show.
 
 ## Safety around user state
 
