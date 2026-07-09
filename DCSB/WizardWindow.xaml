@@ -209,6 +209,26 @@
                                    Text="{Binding CableCaptureName}" />
                     </StackPanel>
                 </Border>
+                <Border Background="#F1F3F4"
+                        BorderBrush="#DADCE0"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="10"
+                        Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Optional: reduce the cable's delay" />
+                        <TextBlock Margin="0,4,0,0"
+                                   TextWrapping="Wrap"
+                                   Text="VB-Cable buffers your voice for a few extra milliseconds. To shrink that, open the VB-Cable Control Panel and pick a smaller value in its Latency menu (&quot;7168 smp&quot; is the default; changes apply immediately). Watch the panel's latency counter with Discord and your apps running: if it turns red or audio breaks up, the value is too small for the apps using the cable - go one step back up. &quot;3x 1024 smp&quot; is a good first try." />
+                        <Button Content="Open VB-Cable Control Panel..."
+                                Command="{Binding OpenCableControlPanelCommand}"
+                                Visibility="{Binding HasCableControlPanel, Converter={StaticResource boolToVis}}"
+                                HorizontalAlignment="Left"
+                                Padding="10,3"
+                                Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
                 <TextBlock Margin="0,12,0,0"
                            TextWrapping="Wrap"
                            Opacity="0.75"
