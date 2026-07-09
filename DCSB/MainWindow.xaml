@@ -21,8 +21,11 @@
     </i:Interaction.Triggers>
 
     <i:Interaction.Behaviors>
-        <Interactivity:OpenCloseWindowBehavior WindowType="local:SettingsWindow" 
-                                               Open="{Binding ApplicationStateModel.SettingsOpened, Mode=TwoWay}" 
+        <Interactivity:OpenCloseWindowBehavior WindowType="local:SettingsWindow"
+                                               Open="{Binding ApplicationStateModel.SettingsOpened, Mode=TwoWay}"
+                                               DataContext="{Binding}" />
+        <Interactivity:OpenCloseWindowBehavior WindowType="local:WizardWindow"
+                                               Open="{Binding ApplicationStateModel.WizardOpened, Mode=TwoWay}"
                                                DataContext="{Binding}" />
         <Interactivity:OpenCloseWindowBehavior WindowType="local:SoundWindow" 
                                                Open="{Binding ApplicationStateModel.SoundOpened, Mode=TwoWay}" 

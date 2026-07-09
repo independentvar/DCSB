@@ -207,6 +207,27 @@ namespace DCSB.Models
             }
         }
 
+        // Gate for the first-run setup wizard. A brand-new install starts false so the
+        // wizard runs once; completing (or skipping) it sets this true. Configs written
+        // before the wizard existed have no <SetupCompleted> element, so the companion
+        // SetupCompletedSpecified stays false on load - ConfigurationManager uses that to
+        // migrate existing users to "completed" so they never see the wizard.
+        private bool _setupCompleted;
+        public bool SetupCompleted
+        {
+            get { return _setupCompleted; }
+            set
+            {
+                _setupCompleted = value;
+                OnPropertyChanged("SetupCompleted");
+            }
+        }
+
+        // XmlSerializer's *Specified pattern: set to true during deserialization only
+        // when the element was actually present in the file, and consulted when writing.
+        [XmlIgnore]
+        public bool SetupCompletedSpecified { get; set; }
+
         private ObservableObjectCollection<Preset> _presetCollection;
         public ObservableObjectCollection<Preset> PresetCollection
         {

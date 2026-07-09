@@ -97,6 +97,17 @@ namespace DCSB
                 HwndSource.FromHwnd(handle)?.AddHook(WndProc);
 
                 overlayManager = new OverlayManager(viewModel);
+
+                // First run only: show the setup wizard once the main window is up.
+                // Existing users were migrated to SetupCompleted=true on config load, so
+                // they never see it. Dispatched at idle so the wizard's modal dialog does
+                // not block the rest of window initialization.
+                if (!viewModel.ConfigurationModel.SetupCompleted)
+                {
+                    Dispatcher.BeginInvoke(
+                        new Action(() => viewModel.OpenWizardCommand.Execute(null)),
+                        System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                }
             }
         }
 

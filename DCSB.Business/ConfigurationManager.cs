@@ -99,7 +99,11 @@ namespace DCSB.Business
         {
             if (!File.Exists(ConfigPath))
             {
-                return new ConfigurationModel();
+                // brand-new install: no config yet, so the setup wizard should run once.
+                // Mark the flag as specified so it is written out (as false) from now on.
+                ConfigurationModel fresh = new ConfigurationModel();
+                fresh.SetupCompletedSpecified = true;
+                return fresh;
             }
 
             XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
@@ -110,6 +114,15 @@ namespace DCSB.Business
                 try
                 {
                     result = (ConfigurationModel)serializer.Deserialize(stream);
+                    // A config written before the wizard existed has no <SetupCompleted>
+                    // element, so it deserializes with SetupCompletedSpecified == false.
+                    // These are existing users with a working setup - migrate them to
+                    // "completed" so the wizard never interrupts them.
+                    if (!result.SetupCompletedSpecified)
+                    {
+                        result.SetupCompleted = true;
+                        result.SetupCompletedSpecified = true;
+                    }
                     return result;
                 }
                 catch (Exception e)

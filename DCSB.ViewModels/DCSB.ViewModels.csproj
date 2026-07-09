@@ -15,6 +15,7 @@
     <ProjectReference Include="..\DCSB.Input\DCSB.Input.csproj" />
     <ProjectReference Include="..\DCSB.Interactivity\DCSB.Interactivity.csproj" />
     <ProjectReference Include="..\DCSB.Models\DCSB.Models.csproj" />
+    <ProjectReference Include="..\DCSB.Sound\DCSB.SoundPlayer.csproj" />
     <ProjectReference Include="..\DCSB.Utils\DCSB.Utils.csproj" />
   </ItemGroup>
 </Project>

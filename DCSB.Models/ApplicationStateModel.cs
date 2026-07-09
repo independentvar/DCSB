@@ -48,6 +48,17 @@ namespace DCSB.Models
             }
         }
 
+        private bool _wizardOpened;
+        public bool WizardOpened
+        {
+            get { return _wizardOpened; }
+            set
+            {
+                _wizardOpened = value;
+                OnPropertyChanged("WizardOpened");
+            }
+        }
+
         private bool _overlayEditOpened;
         public bool OverlayEditOpened
         {

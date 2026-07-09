@@ -11,6 +11,7 @@ namespace DCSB.Business
         private AudioPlaybackEngine _primarySoundPlayer;
         private AudioPlaybackEngine _secondarySoundPlayer;
         private MicrophoneInput _microphoneInput;
+        private MicrophoneInput _cableProbe;
         private Random _random;
 
         private float _volume = 1f;
@@ -84,6 +85,16 @@ namespace DCSB.Business
         // peak level (0..1) of the captured microphone signal, raised from the
         // capture thread ~40 times per second; drives the settings level meter
         public event EventHandler<float> MicrophoneLevelChanged;
+
+        // peak output level (0..1) of each engine, raised from its render thread;
+        // drives the setup wizard's per-output meters. Null while that output is disabled.
+        public event EventHandler<float> PrimaryLevelChanged;
+        public event EventHandler<float> SecondaryLevelChanged;
+
+        // peak level (0..1) of audio captured from the virtual cable's recording endpoint
+        // (e.g. CABLE Output) while the wizard's verify step runs; lets the wizard prove
+        // that a sound sent to the cable actually comes back out of it.
+        public event EventHandler<float> CableProbeLevelChanged;
 
         public SoundManager(ConfigurationModel configurationModel)
         {
@@ -233,6 +244,19 @@ namespace DCSB.Business
             {
                 soundPlayer.Overlap = Overlap;
                 soundPlayer.Volume = _volume * deviceVolume;
+                // forward the new engine's meter; the old engine was disposed above, so
+                // its subscription is gone with it
+                soundPlayer.LevelChanged += primary ? OnPrimaryLevel : OnSecondaryLevel;
+            }
+            else if (primary && PrimaryLevelChanged != null)
+            {
+                // output was disabled - drop its meter to zero so a stale reading does
+                // not linger in the wizard
+                PrimaryLevelChanged(this, 0f);
+            }
+            else if (!primary && SecondaryLevelChanged != null)
+            {
+                SecondaryLevelChanged(this, 0f);
             }
 
             return selectedDeviceName;
@@ -332,6 +356,79 @@ namespace DCSB.Business
             if (MicrophoneLevelChanged != null) MicrophoneLevelChanged(this, level);
         }
 
+        private void OnPrimaryLevel(object sender, float level)
+        {
+            if (PrimaryLevelChanged != null) PrimaryLevelChanged(this, level);
+        }
+
+        private void OnSecondaryLevel(object sender, float level)
+        {
+            if (SecondaryLevelChanged != null) SecondaryLevelChanged(this, level);
+        }
+
+        // Plays the bundled test tone through both output engines at once (the setup
+        // wizard's verify step). Going through PlaySound keeps it on the same path a
+        // real sound takes, so the per-output meters and the cable capture reflect
+        // exactly what a real sound would do.
+        public void PlayTestSound()
+        {
+            string file = TestSound.GetPath();
+            try
+            {
+                if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, 1f, false);
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, 1f, false);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+            }
+            if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
+        }
+
+        // Opens the given capture endpoint (the cable's recording device) and reports
+        // its level via CableProbeLevelChanged. Independent of the microphone leg: this
+        // just listens to what actually arrives at the cable output during the wizard
+        // test. Returns the resolved device name, or Disabled when it cannot be opened.
+        public string StartCableProbe(string deviceName)
+        {
+            StopCableProbe();
+
+            string resolvedName = MicrophoneInput.ResolveDeviceName(deviceName);
+            if (resolvedName == null)
+            {
+                return MicrophoneInput.DisabledDeviceName;
+            }
+
+            try
+            {
+                _cableProbe = new MicrophoneInput(resolvedName);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                _cableProbe = null;
+                return MicrophoneInput.DisabledDeviceName;
+            }
+
+            _cableProbe.LevelChanged += OnCableProbeLevel;
+            return resolvedName;
+        }
+
+        public void StopCableProbe()
+        {
+            if (_cableProbe != null)
+            {
+                _cableProbe.LevelChanged -= OnCableProbeLevel;
+                _cableProbe.Dispose();
+                _cableProbe = null;
+            }
+        }
+
+        private void OnCableProbeLevel(object sender, float level)
+        {
+            if (CableProbeLevelChanged != null) CableProbeLevelChanged(this, level);
+        }
+
         public ICollection<string> EnumerateDevices()
         {
             return AudioPlaybackEngine.EnumerateDevices();
@@ -347,6 +444,7 @@ namespace DCSB.Business
         // whole process running after the window closes.
         public void Dispose()
         {
+            StopCableProbe();
             if (_microphoneInput != null)
             {
                 _microphoneInput.Dispose();
