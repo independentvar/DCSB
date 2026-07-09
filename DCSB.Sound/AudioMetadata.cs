@@ -7,26 +7,32 @@ namespace DCSB.SoundPlayer
 {
     public static class AudioMetadata
     {
-        // Opens the file just long enough to read its length, using the same
-        // decoder fallback chain as playback (see AudioPlaybackEngine.PlaySound),
-        // then disposes the reader. Returns null when the file can't be read.
+        // The same decoder fallback chain playback uses (see
+        // AudioPlaybackEngine.PlaySound); the caller owns disposing the reader.
+        public static IAudioReader OpenReader(string fileName)
+        {
+            try
+            {
+                return new FileReader(fileName);
+            }
+            catch (COMException)
+            {
+                return new OggFileReader(fileName);
+            }
+            catch (MmException)
+            {
+                return new MediaFoundationFileReader(fileName);
+            }
+        }
+
+        // Opens the file just long enough to read its length, then disposes the
+        // reader. Returns null when the file can't be read.
         public static TimeSpan? GetDuration(string fileName)
         {
             IAudioReader reader = null;
             try
             {
-                try
-                {
-                    reader = new FileReader(fileName);
-                }
-                catch (COMException)
-                {
-                    reader = new OggFileReader(fileName);
-                }
-                catch (MmException)
-                {
-                    reader = new MediaFoundationFileReader(fileName);
-                }
+                reader = OpenReader(fileName);
                 return reader.TotalTime;
             }
             catch

@@ -50,6 +50,17 @@ namespace DCSB.Models
             }
         }
 
+        private bool _normalizeVolume;
+        public bool NormalizeVolume
+        {
+            get { return _normalizeVolume; }
+            set
+            {
+                _normalizeVolume = value;
+                OnPropertyChanged("NormalizeVolume");
+            }
+        }
+
         private string _primaryOutput;
         public string PrimaryOutput
         {

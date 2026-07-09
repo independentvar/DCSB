@@ -54,6 +54,7 @@ namespace DCSB.ViewModels
         {
             // must be wired before Load() so sounds get their duration as they deserialize
             Sound.DurationProvider = SoundManager.GetDuration;
+            Sound.LoudnessPrefetcher = SoundManager.PrefetchLoudness;
 
             _applicationStateModel = new ApplicationStateModel();
             _configurationManager = new ConfigurationManager();
@@ -333,6 +334,17 @@ namespace DCSB.ViewModels
                 _configurationModel.Overlap = value;
                 _soundManager.Overlap = _configurationModel.Overlap;
                 OnPropertyChanged("Overlap");
+            }
+        }
+
+        public bool NormalizeVolume
+        {
+            get { return _configurationModel.NormalizeVolume; }
+            set
+            {
+                _configurationModel.NormalizeVolume = value;
+                _soundManager.NormalizeVolume = _configurationModel.NormalizeVolume;
+                OnPropertyChanged("NormalizeVolume");
             }
         }
 

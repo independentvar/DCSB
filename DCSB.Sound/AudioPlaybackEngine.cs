@@ -1,10 +1,8 @@
-using NAudio;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 
 namespace DCSB.SoundPlayer
 {
@@ -159,30 +157,22 @@ namespace DCSB.SoundPlayer
             handler(this, Math.Min(peak, 1f));
         }
 
-        public void PlaySound(string fileName, float volume, bool loop)
+        // normalizationGain is a linear factor applied on top of the exponential
+        // volume curve (1 = none); the caller computes it from the file's measured
+        // loudness so differently mastered clips play equally loud
+        public void PlaySound(string fileName, float volume, bool loop, float normalizationGain = 1f)
         {
             if (!Overlap)
             {
                 Stop();
             }
 
-            IAudioReader input;
-            try
-            {
-                input = new FileReader(fileName);
-            }
-            catch (COMException)
-            {
-                input = new OggFileReader(fileName);
-            }
-            catch (MmException)
-            {
-                // No ACM MP3 codec installed (e.g. Windows N editions) - decode via Media Foundation instead
-                input = new MediaFoundationFileReader(fileName);
-            }
+            // decoder fallback chain: no ACM MP3 codec (e.g. Windows N editions)
+            // raises MmException and Media Foundation decodes instead
+            IAudioReader input = AudioMetadata.OpenReader(fileName);
 
             SampleReader reader = new SampleReader(input, loop);
-            AddMixerInput(reader, volume);
+            AddMixerInput(reader, volume, normalizationGain);
             _currentReader = reader;
 
             // starting a new sound resumes paused ones, matching the old behavior of
@@ -287,10 +277,10 @@ namespace DCSB.SoundPlayer
             return new WdlResamplingSampleProvider(input, _mixer.WaveFormat.SampleRate);
         }
 
-        private void AddMixerInput(ISampleProvider input, float volume)
+        private void AddMixerInput(ISampleProvider input, float volume, float normalizationGain)
         {
             ISampleProvider convertedInput = ConvertToRightSampleRate(ConvertToRightChannelCount(input));
-            VolumeSampleProvider volumeSampleProvider = new VolumeSampleProvider(convertedInput) { Volume = AdjustVolume(volume) };
+            VolumeSampleProvider volumeSampleProvider = new VolumeSampleProvider(convertedInput) { Volume = AdjustVolume(volume) * normalizationGain };
             _mixer.AddMixerInput(volumeSampleProvider);
         }
 
