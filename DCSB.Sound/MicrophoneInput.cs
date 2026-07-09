@@ -2,6 +2,7 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.Runtime;
 
 namespace DCSB.SoundPlayer
 {
@@ -29,6 +30,14 @@ namespace DCSB.SoundPlayer
         // render clock drift must show up as a brief glitch, not as voice latency
         // that ratchets up and stays for the rest of the session
         private const int LatencyResetMilliseconds = 80;
+
+        // While any microphone is live, blocking full GCs are the one thing that can
+        // stall the audio threads past the (very small) IAudioClient3 stream buffer
+        // and click on stream, so SustainedLowLatency is held for that duration.
+        // Refcounted in case more than one engine ever attaches a microphone.
+        private static readonly object _gcModeLock = new object();
+        private static int _gcModeHolders;
+        private static GCLatencyMode _previousGcMode;
 
         private readonly IWaveIn _capture;
         private readonly BufferedWaveProvider _buffer;
@@ -71,6 +80,16 @@ namespace DCSB.SoundPlayer
             _capture.DataAvailable += OnDataAvailable;
             _capture.RecordingStopped += OnRecordingStopped;
             _capture.StartRecording();
+
+            lock (_gcModeLock)
+            {
+                if (_gcModeHolders == 0)
+                {
+                    _previousGcMode = GCSettings.LatencyMode;
+                    GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+                }
+                _gcModeHolders++;
+            }
         }
 
         // Drops any captured audio that accumulated while nothing was reading the
@@ -203,9 +222,22 @@ namespace DCSB.SoundPlayer
 
         public void Dispose()
         {
+            if (_disposed)
+            {
+                return;
+            }
             _disposed = true;
             _capture.DataAvailable -= OnDataAvailable;
             _capture.Dispose();
+
+            lock (_gcModeLock)
+            {
+                _gcModeHolders--;
+                if (_gcModeHolders == 0)
+                {
+                    GCSettings.LatencyMode = _previousGcMode;
+                }
+            }
         }
     }
 }
