@@ -16,12 +16,12 @@ namespace DCSB.SoundPlayer
         // WaveOut device names (used by older versions) were truncated to 31 characters
         private const int LegacyDeviceNameLength = 31;
 
-        // WASAPI shared-mode, event-driven output buffer; sets the floor of the
-        // microphone passthrough latency, so it must stay small - but not so small
-        // that cheap USB devices underrun (30 ms is safe there, 100 ms is not needed)
+        // buffer for the stock WasapiOut used when LowLatencyWasapiOut fails
+        // outright; sets the floor of the microphone passthrough latency, so it
+        // must stay small - but not so small that cheap USB devices underrun
         private const int OutputLatencyMilliseconds = 30;
 
-        private readonly WasapiOut _outputDevice;
+        private readonly IWavePlayer _outputDevice;
         private readonly MixingSampleProvider _mixer;
         private readonly VolumeSampleProvider _masterVolume;
         private readonly MeteringSampleProvider _meter;
@@ -119,9 +119,28 @@ namespace DCSB.SoundPlayer
             _outputMixer = new MixingSampleProvider(format) { ReadFully = true };
             _outputMixer.AddMixerInput(_soundBranch);
 
-            _outputDevice = new WasapiOut(device, AudioClientShareMode.Shared, true, OutputLatencyMilliseconds);
-            _outputDevice.Init(_outputMixer);
+            _outputDevice = CreateOutputDevice(device, _outputMixer);
             _outputDevice.Play();
+        }
+
+        // Prefers the IAudioClient3-based output (engine-minimum period, ~3-10 ms);
+        // any failure there falls back to the stock WasapiOut at a small buffer, so
+        // an exotic device or OS can never lose audio entirely to the fast path.
+        private static IWavePlayer CreateOutputDevice(MMDevice device, MixingSampleProvider outputMixer)
+        {
+            LowLatencyWasapiOut lowLatencyOutput = new LowLatencyWasapiOut(device);
+            try
+            {
+                lowLatencyOutput.Init(new SampleToWaveProvider(outputMixer));
+                return lowLatencyOutput;
+            }
+            catch (Exception)
+            {
+                lowLatencyOutput.Dispose();
+                WasapiOut fallbackOutput = new WasapiOut(device, AudioClientShareMode.Shared, true, OutputLatencyMilliseconds);
+                fallbackOutput.Init(outputMixer);
+                return fallbackOutput;
+            }
         }
 
         private void OnStreamVolume(object sender, StreamVolumeEventArgs e)
