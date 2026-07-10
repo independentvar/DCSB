@@ -96,6 +96,19 @@ namespace DCSB.Models
             }
         }
 
+        // silences the microphone leg without dropping the capture device, so
+        // unmuting is instant; persisted so a muted mic stays muted across restarts
+        private bool _microphoneMuted;
+        public bool MicrophoneMuted
+        {
+            get { return _microphoneMuted; }
+            set
+            {
+                _microphoneMuted = value;
+                OnPropertyChanged("MicrophoneMuted");
+            }
+        }
+
         // 0-200: values above 100 boost a quiet microphone
         private int _microphoneVolume;
         public int MicrophoneVolume

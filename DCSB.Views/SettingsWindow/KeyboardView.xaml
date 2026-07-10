@@ -168,6 +168,31 @@
                 </Grid>
             </GroupBox>
 
+            <GroupBox Header="Microphone">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.Column="0" Width="{Binding ActualWidth, ElementName=label}"
+                           ToolTip="Mutes/unmutes your voice in the second output device">Mute:</Label>
+                    <Controls:ShortcutBox Grid.Column="1" Margin="2"
+                                          Text="{Binding ConfigurationModel.SoundShortcuts.MuteMicrophone.Keys, Converter={StaticResource vKeysToStringConverter}}"
+                                          Command="{Binding BindKeysCommand}"
+                                          CommandParameter="{Binding ConfigurationModel.SoundShortcuts.MuteMicrophone}"
+                                          ClearCommand="{Binding ClearBindableCommand}"
+                                          ClearCommandParameter="{Binding ConfigurationModel.SoundShortcuts.MuteMicrophone}">
+                        <Controls:ShortcutBox.IsActive>
+                            <MultiBinding Converter="{StaticResource areEqualConverter}">
+                                <Binding Path="ApplicationStateModel.ModifiedBindable" />
+                                <Binding Path="ConfigurationModel.SoundShortcuts.MuteMicrophone" />
+                            </MultiBinding>
+                        </Controls:ShortcutBox.IsActive>
+                    </Controls:ShortcutBox>
+                </Grid>
+            </GroupBox>
+
             <GroupBox Header="New Sounds">
                 <StackPanel>
                     <CheckBox Margin="2" IsChecked="{Binding ConfigurationModel.AutoAssignKeys}">Automatically assign keys to new sounds</CheckBox>
