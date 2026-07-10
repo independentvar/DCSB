@@ -11,6 +11,9 @@ on:
   push:
     branches: [ci/build-deepfilternet]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
