@@ -78,6 +78,7 @@ namespace DCSB.ViewModels
             _configurationModel.SoundShortcuts.Pause.Command = PauseCommand;
             _configurationModel.SoundShortcuts.Continue.Command = ContinueCommand;
             _configurationModel.SoundShortcuts.Stop.Command = StopCommand;
+            _configurationModel.SoundShortcuts.MuteMicrophone.Command = MuteMicrophoneCommand;
 
             // the seekbar updates once per rendered frame, but only while a sound is
             // playing and the window can actually be seen (not minimized, not hidden
@@ -424,6 +425,17 @@ namespace DCSB.ViewModels
                 _configurationModel.MicrophoneVolume = (int)value;
                 _soundManager.MicrophoneVolume = _configurationModel.MicrophoneVolume / 100f;
                 OnPropertyChanged("MicrophoneVolume");
+            }
+        }
+
+        public bool MicrophoneMuted
+        {
+            get { return _configurationModel.MicrophoneMuted; }
+            set
+            {
+                _configurationModel.MicrophoneMuted = value;
+                _soundManager.MicrophoneMuted = value;
+                OnPropertyChanged("MicrophoneMuted");
             }
         }
 
@@ -858,6 +870,15 @@ namespace DCSB.ViewModels
             }
         }
 
+        public ICommand MuteMicrophoneCommand
+        {
+            get { return new RelayCommand(MuteMicrophone); }
+        }
+        private void MuteMicrophone()
+        {
+            MicrophoneMuted = !MicrophoneMuted;
+        }
+
         public ICommand AddSoundCommand
         {
             get { return new RelayCommand(AddSound, AreSoundsEnabled); }
@@ -936,7 +957,8 @@ namespace DCSB.ViewModels
                 _configurationModel.CounterShortcuts.Reset,
                 _configurationModel.SoundShortcuts.Pause,
                 _configurationModel.SoundShortcuts.Continue,
-                _configurationModel.SoundShortcuts.Stop
+                _configurationModel.SoundShortcuts.Stop,
+                _configurationModel.SoundShortcuts.MuteMicrophone
             }.Concat(_configurationModel.PresetCollection);
 
             return reserved.Any(bindable =>

@@ -71,6 +71,16 @@ namespace DCSB.Business
                     shortcut.Command.Execute(null);
                 }
             }
+
+            // the microphone leg is independent of the sounds display option (muting
+            // sounds must not mute the voice), so this shortcut is always active
+            Shortcut muteMicrophone = ResolveShortcut(key, pressedKeys, new List<Shortcut>() {
+                _configurationModel.SoundShortcuts.MuteMicrophone
+            });
+            if (muteMicrophone != null && muteMicrophone.Command.CanExecute(null))
+            {
+                muteMicrophone.Command.Execute(null);
+            }
         }
 
         public void KeyPress(VKey key, List<VKey> pressedKeys)

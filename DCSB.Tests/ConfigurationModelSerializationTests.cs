@@ -119,6 +119,36 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesMicrophoneMuteSettings()
+        {
+            ConfigurationModel model = new ConfigurationModel { MicrophoneMuted = true };
+            model.SoundShortcuts.MuteMicrophone.Keys.Add(VKey.F8);
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.IsTrue(loaded.MicrophoneMuted);
+            Assert.AreEqual(1, loaded.SoundShortcuts.MuteMicrophone.Keys.Count);
+            Assert.AreEqual(VKey.F8, loaded.SoundShortcuts.MuteMicrophone.Keys[0]);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutMicrophoneMuteElements_UsesDefaults()
+        {
+            // configs written by older versions have no mute elements; the microphone
+            // must load unmuted with no mute keybind
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.IsFalse(loaded.MicrophoneMuted);
+            Assert.AreEqual(0, loaded.SoundShortcuts.MuteMicrophone.Keys.Count);
+        }
+
+        [TestMethod]
         public void RoundTrip_PreservesOverlaySettings()
         {
             ConfigurationModel model = new ConfigurationModel { OverlayEnabled = false, OverlayOpacity = 40 };

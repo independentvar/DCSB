@@ -61,8 +61,30 @@ namespace DCSB.Business
             set
             {
                 _microphoneVolume = value;
-                if (_secondarySoundPlayer != null) _secondarySoundPlayer.MicrophoneVolume = value;
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.MicrophoneVolume = EffectiveMicrophoneVolume;
             }
+        }
+
+        // mute zeroes the gain instead of detaching the capture device, so unmuting
+        // is instant with no device rebuild; the level meter reads zero while muted
+        // (see OnMicrophoneLevelChanged) to reflect that nothing reaches the output
+        private bool _microphoneMuted;
+        public bool MicrophoneMuted
+        {
+            get { return _microphoneMuted; }
+            set
+            {
+                _microphoneMuted = value;
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.MicrophoneVolume = EffectiveMicrophoneVolume;
+                // rest the meter right away instead of waiting for the next capture
+                // buffer (and cover the case where capture has stalled entirely)
+                if (value && MicrophoneLevelChanged != null) MicrophoneLevelChanged(this, 0f);
+            }
+        }
+
+        private float EffectiveMicrophoneVolume
+        {
+            get { return _microphoneMuted ? 0f : _microphoneVolume; }
         }
 
         // when enabled, each clip gets a make-up gain toward a common loudness
@@ -146,8 +168,10 @@ namespace DCSB.Business
             _random = new Random();
             _configurationModel = configurationModel;
 
-            // the microphone gain must be known before ChangeMicrophoneInput attaches the mic
+            // the microphone gain and mute state must be known before
+            // ChangeMicrophoneInput attaches the mic
             _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
+            _microphoneMuted = configurationModel.MicrophoneMuted;
 
             configurationModel.PrimaryOutput = ChangePrimaryOutput(configurationModel.PrimaryOutput);
             configurationModel.SecondaryOutput = ChangeSecondaryOutput(configurationModel.SecondaryOutput);
@@ -393,7 +417,7 @@ namespace DCSB.Business
                 // drop audio captured while nothing was consuming the buffer, so the
                 // voice resumes live instead of replaying a backlog
                 _microphoneInput.Flush();
-                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, _microphoneVolume);
+                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume);
             }
             catch (Exception e)
             {
@@ -413,7 +437,9 @@ namespace DCSB.Business
 
         private void OnMicrophoneLevelChanged(object sender, float level)
         {
-            if (MicrophoneLevelChanged != null) MicrophoneLevelChanged(this, level);
+            // while muted nothing reaches the output, so the meter shows zero even
+            // though capture keeps running (that keeps unmuting instant)
+            if (MicrophoneLevelChanged != null) MicrophoneLevelChanged(this, _microphoneMuted ? 0f : level);
         }
 
         private void OnPrimaryLevel(object sender, float level)
