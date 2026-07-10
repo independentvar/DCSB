@@ -24,6 +24,7 @@ Deathcounter and Soundboard (DCSB) — a .NET 10 (`net10.0-windows`) WPF app usi
 - User config is stored machine-wide at `%ProgramData%\DCSB\config.xml`. Saves are debounced 1s via a timer in `DCSB.Business\ConfigurationManager.cs`; `Dispose()` flushes the pending save.
 - The update checker (`DCSB.Business\UpdateManager.cs`) reads this fork's GitHub releases and parses the version from the tag name — tags must contain `x.y.z.w`. TLS 1.2 is enabled explicitly there (harmless leftover from the .NET 4.5.2 days; modern .NET negotiates TLS 1.2+ by default). It still uses the obsolete `WebClient`/`ServicePointManager` APIs, which build with `SYSLIB0014` warnings on .NET 10.
 - `DCSB.Input` uses Win32 Raw Input P/Invoke for global hotkeys — sensitive to window-handle lifecycle.
+- `ThirdParty\rnnoise\rnnoise.dll` is a **committed native binary** (mic noise suppression, P/Invoked by `DCSB.SoundPlayer.NoiseSuppressor`). It is never built locally: the `build-rnnoise` GitHub Actions workflow compiles it from a pinned xiph/rnnoise tag via `ThirdParty\rnnoise\build-rnnoise.ps1` (pins + provenance in `ThirdParty\rnnoise\README.md`). `DCSB.SoundPlayer.csproj` copies it to output, so the installer picks it up automatically.
 
 ## Repo etiquette
 

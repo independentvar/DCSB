@@ -148,6 +148,7 @@
                         <RowDefinition />
                         <RowDefinition />
                         <RowDefinition />
+                        <RowDefinition />
                     </Grid.RowDefinitions>
 
                     <Label Grid.Column="0"
@@ -219,8 +220,16 @@
                                  Maximum="1"
                                  Value="{Binding MicrophoneLevel, Mode=OneWay}" />
 
+                    <CheckBox Grid.Column="1"
+                              Grid.Row="3"
+                              Margin="3"
+                              IsChecked="{Binding NoiseSuppression}"
+                              ToolTip="Removes constant background noise (fans, hum, hiss) from your voice using RNNoise. Tuned for speech: music or game audio picked up by the microphone is suppressed as noise too. Adds about 10 ms of voice latency.">
+                        Suppress background noise
+                    </CheckBox>
+
                     <TextBlock Grid.Column="1"
-                               Grid.Row="3"
+                               Grid.Row="4"
                                Margin="3"
                                TextWrapping="Wrap"
                                Opacity="0.7">

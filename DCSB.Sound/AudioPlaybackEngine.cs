@@ -36,6 +36,7 @@ namespace DCSB.SoundPlayer
         // not quiet the user's voice in their call)
         private ISampleProvider _microphoneMixerInput;
         private VolumeSampleProvider _microphoneVolume;
+        private NoiseSuppressionSampleProvider _noiseSuppression;
 
         private int _volumePowBase = 100;
 
@@ -221,9 +222,25 @@ namespace DCSB.SoundPlayer
         // Attaches a continuous microphone stream as a persistent input of the output
         // mixer. Volume is a linear gain (1 = unity); values above 1 boost a quiet
         // microphone, and the exponential sound volume curve does not apply.
-        public void SetMicrophoneInput(ISampleProvider micSource, float micVolume)
+        public void SetMicrophoneInput(ISampleProvider micSource, float micVolume, bool noiseSuppression = false)
         {
             RemoveMicrophoneInput();
+
+            if (noiseSuppression)
+            {
+                // a broken install (missing rnnoise.dll) degrades to the raw voice
+                // instead of taking the microphone down with it
+                try
+                {
+                    _noiseSuppression = new NoiseSuppressionSampleProvider(micSource);
+                    micSource = _noiseSuppression;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e);
+                    _noiseSuppression = null;
+                }
+            }
 
             ISampleProvider convertedInput = ConvertToRightSampleRate(ConvertToRightChannelCount(micSource));
             _microphoneVolume = new VolumeSampleProvider(convertedInput) { Volume = micVolume };
@@ -243,6 +260,14 @@ namespace DCSB.SoundPlayer
                 _outputMixer.RemoveMixerInput(_microphoneMixerInput);
                 _microphoneMixerInput = null;
                 _microphoneVolume = null;
+            }
+            if (_noiseSuppression != null)
+            {
+                // safe once the mixer input is gone: MixingSampleProvider.Read and
+                // RemoveMixerInput share a lock, so no render-thread Read is still
+                // inside the denoiser
+                _noiseSuppression.Dispose();
+                _noiseSuppression = null;
             }
         }
 
@@ -386,6 +411,13 @@ namespace DCSB.SoundPlayer
         public void Dispose()
         {
             _outputDevice.Dispose();
+            // free the native rnnoise state; the output device is stopped, so the
+            // render thread can no longer be inside the denoiser
+            if (_noiseSuppression != null)
+            {
+                _noiseSuppression.Dispose();
+                _noiseSuppression = null;
+            }
         }
     }
 }

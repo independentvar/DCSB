@@ -87,6 +87,19 @@ namespace DCSB.Business
             get { return _microphoneMuted ? 0f : _microphoneVolume; }
         }
 
+        // rnnoise on the microphone leg; toggling rebuilds the mic chain on the
+        // secondary engine, the capture device itself stays open
+        private bool _noiseSuppression;
+        public bool NoiseSuppression
+        {
+            get { return _noiseSuppression; }
+            set
+            {
+                _noiseSuppression = value;
+                AttachMicrophone();
+            }
+        }
+
         // when enabled, each clip gets a make-up gain toward a common loudness
         // target so differently mastered files play equally loud; the flag also
         // gates the background loudness prefetch so disabled installs don't
@@ -168,10 +181,11 @@ namespace DCSB.Business
             _random = new Random();
             _configurationModel = configurationModel;
 
-            // the microphone gain and mute state must be known before
-            // ChangeMicrophoneInput attaches the mic
+            // the microphone gain, mute state and noise suppression must be known
+            // before ChangeMicrophoneInput attaches the mic
             _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
             _microphoneMuted = configurationModel.MicrophoneMuted;
+            _noiseSuppression = configurationModel.NoiseSuppression;
 
             configurationModel.PrimaryOutput = ChangePrimaryOutput(configurationModel.PrimaryOutput);
             configurationModel.SecondaryOutput = ChangeSecondaryOutput(configurationModel.SecondaryOutput);
@@ -417,7 +431,7 @@ namespace DCSB.Business
                 // drop audio captured while nothing was consuming the buffer, so the
                 // voice resumes live instead of replaying a backlog
                 _microphoneInput.Flush();
-                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume);
+                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume, _noiseSuppression);
             }
             catch (Exception e)
             {

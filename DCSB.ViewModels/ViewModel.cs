@@ -439,6 +439,17 @@ namespace DCSB.ViewModels
             }
         }
 
+        public bool NoiseSuppression
+        {
+            get { return _configurationModel.NoiseSuppression; }
+            set
+            {
+                _configurationModel.NoiseSuppression = value;
+                _soundManager.NoiseSuppression = value;
+                OnPropertyChanged("NoiseSuppression");
+            }
+        }
+
         // peak of the captured microphone signal (0..1); lets the user see in the
         // settings that their voice is actually being picked up
         private float _microphoneLevel;

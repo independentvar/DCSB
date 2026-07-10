@@ -109,6 +109,19 @@ namespace DCSB.Models
             }
         }
 
+        // rnnoise-based noise suppression on the microphone leg; absent in older
+        // configs, so existing setups load with it off
+        private bool _noiseSuppression;
+        public bool NoiseSuppression
+        {
+            get { return _noiseSuppression; }
+            set
+            {
+                _noiseSuppression = value;
+                OnPropertyChanged("NoiseSuppression");
+            }
+        }
+
         // 0-200: values above 100 boost a quiet microphone
         private int _microphoneVolume;
         public int MicrophoneVolume
