@@ -144,10 +144,19 @@ Invoke-UITest -Name 'NoiseSuppressionModes' -Body {
         Assert-SpeechPasses -CableIn $cableIn -SecondaryName $secondaryName -Label '2b (Fast)'
         Start-Noise -Device $cableIn
 
-        # 3. High quality (DeepFilterNet3) does the same; model load can take a
-        # few seconds, so allow extra settling time
+        # 3. High quality (DeepFilterNet3) does the same. The model load runs on a
+        # worker thread, so selecting it must return promptly instead of freezing
+        # the settings window for the seconds the load takes - and rapid re-toggling
+        # while a load is in flight must end up in the last selected mode (stale
+        # builds are discarded by the attach version guard)
+        $selectTimer = [System.Diagnostics.Stopwatch]::StartNew()
         Select-SuppressionMode $settings 'High quality (DeepFilterNet3)'
-        Start-Sleep -Seconds 6
+        Select-SuppressionMode $settings 'Fast (RNNoise)'
+        Select-SuppressionMode $settings 'High quality (DeepFilterNet3)'
+        $selectTimer.Stop()
+        Write-Host ("3. three rapid mode selections took {0} ms" -f $selectTimer.ElapsedMilliseconds)
+        Assert-True ($selectTimer.ElapsedMilliseconds -lt 1500) "selecting suppression modes blocked the UI thread ($($selectTimer.ElapsedMilliseconds) ms)"
+        Start-Sleep -Seconds 8
         $hqSuppressed = Get-MaxPeak -DeviceName $secondaryName -Seconds 2
         Write-Host ("3. noise peak, High quality: {0:F4}" -f $hqSuppressed)
         Assert-True ($hqSuppressed -lt ($rawPeak * 0.5)) "High quality mode did not reduce the noise floor ($hqSuppressed vs $rawPeak)"
