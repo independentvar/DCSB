@@ -149,13 +149,13 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
-        public void RoundTrip_PreservesNoiseSuppression()
+        public void RoundTrip_PreservesNoiseSuppressionMode()
         {
-            ConfigurationModel model = new ConfigurationModel { NoiseSuppression = true };
+            ConfigurationModel model = new ConfigurationModel { NoiseSuppressionMode = NoiseSuppressionMode.HighQuality };
 
             ConfigurationModel loaded = RoundTrip(model);
 
-            Assert.IsTrue(loaded.NoiseSuppression);
+            Assert.AreEqual(NoiseSuppressionMode.HighQuality, loaded.NoiseSuppressionMode);
         }
 
         [TestMethod]
@@ -171,7 +171,39 @@ namespace DCSB.Tests
                 loaded = (ConfigurationModel)serializer.Deserialize(reader);
             }
 
-            Assert.IsFalse(loaded.NoiseSuppression);
+            Assert.AreEqual(NoiseSuppressionMode.Disabled, loaded.NoiseSuppressionMode);
+        }
+
+        [TestMethod]
+        public void Deserialize_LegacyNoiseSuppressionBool_MigratesToFastMode()
+        {
+            // 4.22.x wrote noise suppression as a bool driving rnnoise; that element
+            // must map onto the Fast mode (and false must stay Disabled)
+            string enabledConfig = "<?xml version=\"1.0\"?><ConfigurationModel><NoiseSuppression>true</NoiseSuppression></ConfigurationModel>";
+            string disabledConfig = "<?xml version=\"1.0\"?><ConfigurationModel><NoiseSuppression>false</NoiseSuppression></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel enabled, disabled;
+            using (StringReader reader = new StringReader(enabledConfig))
+            {
+                enabled = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+            using (StringReader reader = new StringReader(disabledConfig))
+            {
+                disabled = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.AreEqual(NoiseSuppressionMode.Fast, enabled.NoiseSuppressionMode);
+            Assert.AreEqual(NoiseSuppressionMode.Disabled, disabled.NoiseSuppressionMode);
+
+            // the migrated config must be written back with the new element only
+            XmlSerializer writer = new XmlSerializer(typeof(ConfigurationModel));
+            using (StringWriter written = new StringWriter())
+            {
+                writer.Serialize(written, enabled);
+                string xml = written.ToString();
+                StringAssert.Contains(xml, "<NoiseSuppressionMode>Fast</NoiseSuppressionMode>");
+                Assert.IsFalse(xml.Contains("<NoiseSuppression>"), "legacy bool element must not be re-written");
+            }
         }
 
         [TestMethod]

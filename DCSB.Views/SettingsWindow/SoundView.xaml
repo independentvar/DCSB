@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:DCSB.Views.SettingsWindow"
              xmlns:Controls="clr-namespace:DCSB.Controls;assembly=DCSB.Controls"
              xmlns:Converters="clr-namespace:DCSB.Converters;assembly=DCSB.Converters"
+             xmlns:Utils="clr-namespace:DCSB.Utils;assembly=DCSB.Utils"
              mc:Ignorable="d" 
              d:DesignHeight="300"
              d:DesignWidth="400">
@@ -220,13 +221,20 @@
                                  Maximum="1"
                                  Value="{Binding MicrophoneLevel, Mode=OneWay}" />
 
-                    <CheckBox Grid.Column="1"
-                              Grid.Row="3"
-                              Margin="3"
-                              IsChecked="{Binding NoiseSuppression}"
-                              ToolTip="Removes constant background noise (fans, hum, hiss) from your voice using RNNoise. Tuned for speech: music or game audio picked up by the microphone is suppressed as noise too. Adds about 10 ms of voice latency.">
-                        Suppress background noise
-                    </CheckBox>
+                    <Label Grid.Column="0"
+                           Grid.Row="3"
+                           ToolTip="Removes background noise from your voice. Both modes are tuned for speech: music or game audio picked up by the microphone is suppressed as noise too.">Noise:</Label>
+                    <Controls:RadioButtonList Grid.Column="1"
+                                              Grid.Row="3"
+                                              Margin="3"
+                                              SelectedValue="{Binding NoiseSuppressionMode}"
+                                              SelectedValuePath="Tag">
+                        <ListBoxItem Tag="{x:Static Utils:NoiseSuppressionMode.Disabled}">No suppression</ListBoxItem>
+                        <ListBoxItem Tag="{x:Static Utils:NoiseSuppressionMode.Fast}"
+                                     ToolTip="RNNoise. Good on steady noise (fans, hum, hiss); adds about 10 ms of voice latency.">Fast (RNNoise)</ListBoxItem>
+                        <ListBoxItem Tag="{x:Static Utils:NoiseSuppressionMode.HighQuality}"
+                                     ToolTip="DeepFilterNet3. Noticeably better on hard noise (keyboard clatter, background voices); adds about 40 ms of voice latency and uses more CPU.">High quality (DeepFilterNet3)</ListBoxItem>
+                    </Controls:RadioButtonList>
 
                     <TextBlock Grid.Column="1"
                                Grid.Row="4"

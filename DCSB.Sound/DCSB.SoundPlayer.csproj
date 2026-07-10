@@ -10,10 +10,16 @@
     <!-- Short test tone for the setup wizard. Embedded (not a loose file) so it ships
          inside the DLL - the installer generator only packages dll/exe/config/json. -->
     <EmbeddedResource Include="beep.wav" />
-    <!-- vendored native rnnoise (see ThirdParty\rnnoise\README.md); copied beside the
-         exe so the NoiseSuppressor P/Invoke finds it, and shipped by the installer
-         generator like any other dll in bin\Release -->
+    <!-- vendored native denoisers (see ThirdParty\rnnoise\README.md and
+         ThirdParty\deepfilternet\README.md); copied beside the exe so the
+         suppressor P/Invokes find them, and shipped by the installer generator
+         like any other dll in bin\Release -->
     <None Include="..\ThirdParty\rnnoise\rnnoise.dll" Link="rnnoise.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\ThirdParty\deepfilternet\deepfilter.dll" Link="deepfilter.dll" CopyToOutputDirectory="PreserveNewest" />
+    <!-- DeepFilterNet3 model weights. Embedded like beep.wav (the installer ships no
+         loose non-dll files); DeepFilterNetSuppressor extracts it to a temp file
+         because libDF's df_create only accepts a file path -->
+    <EmbeddedResource Include="..\ThirdParty\deepfilternet\DeepFilterNet3_onnx.tar.gz" Link="DeepFilterNet3_onnx.tar.gz" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

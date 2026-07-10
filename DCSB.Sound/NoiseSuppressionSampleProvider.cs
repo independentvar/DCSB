@@ -1,23 +1,27 @@
+using DCSB.Utils;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
 
 namespace DCSB.SoundPlayer
 {
-    // Runs the microphone stream through rnnoise. The model wants 48 kHz mono in
-    // fixed 480-sample frames, so the source is downmixed/resampled here and read
-    // in whole frames (up to 10 ms of extra latency); the engine's usual
-    // converters then take the denoised mono stream to the mixer format.
+    // Runs the microphone stream through the selected denoiser. Both suppressors
+    // want 48 kHz mono in fixed 10 ms frames, so the source is downmixed/resampled
+    // here and read in whole frames (up to 10 ms of extra buffering latency, plus
+    // whatever the model's own lookahead adds); the engine's usual converters then
+    // take the denoised mono stream to the mixer format.
     public class NoiseSuppressionSampleProvider : ISampleProvider, IDisposable
     {
+        private const int TargetSampleRate = 48000;
+
         private readonly ISampleProvider _source;
-        private readonly NoiseSuppressor _suppressor;
+        private readonly INoiseSuppressor _suppressor;
         private readonly float[] _frame;
         private int _position;
 
         public WaveFormat WaveFormat { get; private set; }
 
-        public NoiseSuppressionSampleProvider(ISampleProvider source)
+        public NoiseSuppressionSampleProvider(ISampleProvider source, NoiseSuppressionMode mode)
         {
             if (source.WaveFormat.Channels == 2)
             {
@@ -28,19 +32,29 @@ namespace DCSB.SoundPlayer
                 // same policy as AudioPlaybackEngine.ConvertToRightChannelCount
                 throw new NotImplementedException($"Channel conversion from {source.WaveFormat.Channels} to 1 is not supported.");
             }
-            if (source.WaveFormat.SampleRate != NoiseSuppressor.SampleRate)
+            if (source.WaveFormat.SampleRate != TargetSampleRate)
             {
-                source = new WdlResamplingSampleProvider(source, NoiseSuppressor.SampleRate);
+                source = new WdlResamplingSampleProvider(source, TargetSampleRate);
             }
             _source = source;
 
             // creating the state is also the availability check: a missing or
-            // broken rnnoise.dll throws here, before the provider joins the graph
-            _suppressor = new NoiseSuppressor();
-            _frame = new float[NoiseSuppressor.FrameSize];
+            // broken native dll throws here, before the provider joins the graph
+            switch (mode)
+            {
+                case NoiseSuppressionMode.Fast:
+                    _suppressor = new RNNoiseSuppressor();
+                    break;
+                case NoiseSuppressionMode.HighQuality:
+                    _suppressor = new DeepFilterNetSuppressor();
+                    break;
+                default:
+                    throw new ArgumentException($"No suppressor for mode '{mode}'.", nameof(mode));
+            }
+            _frame = new float[_suppressor.FrameSize];
             _position = _frame.Length;
 
-            WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(NoiseSuppressor.SampleRate, 1);
+            WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(TargetSampleRate, 1);
         }
 
         public int Read(float[] buffer, int offset, int count)

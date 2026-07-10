@@ -109,17 +109,41 @@ namespace DCSB.Models
             }
         }
 
-        // rnnoise-based noise suppression on the microphone leg; absent in older
-        // configs, so existing setups load with it off
-        private bool _noiseSuppression;
-        public bool NoiseSuppression
+        // which denoiser runs on the microphone leg; absent in older configs, so
+        // existing setups load with it disabled
+        private NoiseSuppressionMode _noiseSuppressionMode;
+        public NoiseSuppressionMode NoiseSuppressionMode
         {
-            get { return _noiseSuppression; }
+            get { return _noiseSuppressionMode; }
             set
             {
-                _noiseSuppression = value;
-                OnPropertyChanged("NoiseSuppression");
+                _noiseSuppressionMode = value;
+                OnPropertyChanged("NoiseSuppressionMode");
             }
+        }
+
+        // Legacy 4.22.x element: noise suppression was a bool before it became a
+        // mode. Reading <NoiseSuppression>true</NoiseSuppression> migrates to the
+        // Fast (rnnoise) mode that bool controlled; the *Specified pattern below
+        // keeps the old element from ever being written again.
+        public bool NoiseSuppression
+        {
+            get { return _noiseSuppressionMode != NoiseSuppressionMode.Disabled; }
+            set
+            {
+                if (value)
+                {
+                    NoiseSuppressionMode = NoiseSuppressionMode.Fast;
+                }
+            }
+        }
+
+        // always false on write, so the legacy element is dropped on the next save
+        [XmlIgnore]
+        public bool NoiseSuppressionSpecified
+        {
+            get { return false; }
+            set { }
         }
 
         // 0-200: values above 100 boost a quiet microphone

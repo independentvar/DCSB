@@ -1,6 +1,9 @@
 ﻿using DCSB.Models;
 using DCSB.SoundPlayer;
+using DCSB.Utils;
+using NAudio.Wave;
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -87,10 +90,10 @@ namespace DCSB.Business
             get { return _microphoneMuted ? 0f : _microphoneVolume; }
         }
 
-        // rnnoise on the microphone leg; toggling rebuilds the mic chain on the
+        // denoiser on the microphone leg; switching rebuilds the mic chain on the
         // secondary engine, the capture device itself stays open
-        private bool _noiseSuppression;
-        public bool NoiseSuppression
+        private NoiseSuppressionMode _noiseSuppression;
+        public NoiseSuppressionMode NoiseSuppressionMode
         {
             get { return _noiseSuppression; }
             set
@@ -176,16 +179,21 @@ namespace DCSB.Business
         // that a sound sent to the cable actually comes back out of it.
         public event EventHandler<float> CableProbeLevelChanged;
 
+        // UI-thread context for finishing background suppressor builds where the
+        // rest of the mic-chain state lives; null under plain unit tests
+        private readonly SynchronizationContext _syncContext;
+
         public SoundManager(ConfigurationModel configurationModel)
         {
             _random = new Random();
             _configurationModel = configurationModel;
+            _syncContext = SynchronizationContext.Current;
 
             // the microphone gain, mute state and noise suppression must be known
             // before ChangeMicrophoneInput attaches the mic
             _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
             _microphoneMuted = configurationModel.MicrophoneMuted;
-            _noiseSuppression = configurationModel.NoiseSuppression;
+            _noiseSuppression = configurationModel.NoiseSuppressionMode;
 
             configurationModel.PrimaryOutput = ChangePrimaryOutput(configurationModel.PrimaryOutput);
             configurationModel.SecondaryOutput = ChangeSecondaryOutput(configurationModel.SecondaryOutput);
@@ -409,6 +417,8 @@ namespace DCSB.Business
 
         private void DisableMicrophone()
         {
+            // invalidate any suppressor build still in flight for the old chain
+            _attachVersion++;
             if (_microphoneInput != null)
             {
                 if (_secondarySoundPlayer != null) _secondarySoundPlayer.RemoveMicrophoneInput();
@@ -417,12 +427,63 @@ namespace DCSB.Business
             }
         }
 
-        // capture keeps running even while the secondary output is disabled (the
-        // level meter still shows input); the mic is attached once both ends exist
+        // Every mic-chain mutation happens on the construction (UI) thread and bumps
+        // this; a suppressor built in the background only attaches if its version is
+        // still current, so rapid toggles or device switches can't attach stale chains.
+        private int _attachVersion;
+
+        // Capture keeps running even while the secondary output is disabled (the
+        // level meter still shows input); the mic is attached once both ends exist.
+        // With a suppressor selected, the denoiser is built on a worker thread -
+        // loading the DeepFilterNet model takes seconds and must not freeze the UI -
+        // and swapped in when ready; until then the previous mic chain keeps playing.
         private void AttachMicrophone()
         {
+            int version = ++_attachVersion;
             if (_microphoneInput == null || _secondarySoundPlayer == null)
             {
+                return;
+            }
+
+            NoiseSuppressionMode mode = _noiseSuppression;
+            if (mode == NoiseSuppressionMode.Disabled)
+            {
+                CompleteAttachMicrophone(version, null);
+                return;
+            }
+
+            ISampleProvider micSource = _microphoneInput.SampleProvider;
+            Task.Run(() =>
+            {
+                NoiseSuppressionSampleProvider suppressor = null;
+                try
+                {
+                    suppressor = new NoiseSuppressionSampleProvider(micSource, mode);
+                }
+                catch (Exception e)
+                {
+                    // a broken install (missing suppressor dll) degrades to the raw
+                    // voice instead of taking the microphone down with it
+                    Debug.WriteLine(e);
+                }
+
+                if (_syncContext != null)
+                {
+                    _syncContext.Post(state => CompleteAttachMicrophone(version, suppressor), null);
+                }
+                else
+                {
+                    CompleteAttachMicrophone(version, suppressor);
+                }
+            });
+        }
+
+        private void CompleteAttachMicrophone(int version, NoiseSuppressionSampleProvider suppressor)
+        {
+            // a newer chain change (mode/device/disable) superseded this build
+            if (version != _attachVersion || _microphoneInput == null || _secondarySoundPlayer == null)
+            {
+                if (suppressor != null) suppressor.Dispose();
                 return;
             }
 
@@ -431,7 +492,7 @@ namespace DCSB.Business
                 // drop audio captured while nothing was consuming the buffer, so the
                 // voice resumes live instead of replaying a backlog
                 _microphoneInput.Flush();
-                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume, _noiseSuppression);
+                _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume, suppressor);
             }
             catch (Exception e)
             {
