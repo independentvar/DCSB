@@ -5,6 +5,9 @@
 # developer machine needs a C toolchain.
 name: Build rnnoise.dll
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
