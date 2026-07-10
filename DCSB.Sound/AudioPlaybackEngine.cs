@@ -1,3 +1,4 @@
+using DCSB.Utils;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -222,17 +223,17 @@ namespace DCSB.SoundPlayer
         // Attaches a continuous microphone stream as a persistent input of the output
         // mixer. Volume is a linear gain (1 = unity); values above 1 boost a quiet
         // microphone, and the exponential sound volume curve does not apply.
-        public void SetMicrophoneInput(ISampleProvider micSource, float micVolume, bool noiseSuppression = false)
+        public void SetMicrophoneInput(ISampleProvider micSource, float micVolume, NoiseSuppressionMode noiseSuppression = NoiseSuppressionMode.Disabled)
         {
             RemoveMicrophoneInput();
 
-            if (noiseSuppression)
+            if (noiseSuppression != NoiseSuppressionMode.Disabled)
             {
-                // a broken install (missing rnnoise.dll) degrades to the raw voice
-                // instead of taking the microphone down with it
+                // a broken install (missing suppressor dll) degrades to the raw
+                // voice instead of taking the microphone down with it
                 try
                 {
-                    _noiseSuppression = new NoiseSuppressionSampleProvider(micSource);
+                    _noiseSuppression = new NoiseSuppressionSampleProvider(micSource, noiseSuppression);
                     micSource = _noiseSuppression;
                 }
                 catch (Exception e)

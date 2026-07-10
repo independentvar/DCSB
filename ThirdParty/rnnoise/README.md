@@ -2,7 +2,7 @@
 
 `rnnoise.dll` (x64) is built from [xiph/rnnoise](https://github.com/xiph/rnnoise),
 BSD-3-Clause (see `COPYING`). It powers the "Suppress background noise" option on
-the microphone (`DCSB.SoundPlayer.NoiseSuppressor` P/Invokes it) and is copied to
+the microphone's Fast mode (`DCSB.SoundPlayer.RNNoiseSuppressor` P/Invokes it) and is copied to
 the app output by `DCSB.SoundPlayer.csproj`, from where the installer generator
 ships it like any other dll.
 

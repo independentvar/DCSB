@@ -1,0 +1,33 @@
+# Rebuilds the vendored ThirdParty\deepfilternet binaries from the pinned
+# upstream tag (see build-deepfilternet.ps1 for the pins). Manual-only:
+# dispatch it from the Actions tab after bumping the pins, download the
+# artifact, commit the new files. Same arrangement as build-rnnoise.yml -
+# GitHub's runner image is the canonical build environment, so no developer
+# machine needs a Rust toolchain.
+name: Build deepfilter.dll
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/build-deepfilternet]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build deepfilter.dll from pinned tag
+        shell: pwsh
+        run: ./ThirdParty/deepfilternet/build-deepfilternet.ps1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepfilternet
+          path: |
+            ThirdParty/deepfilternet/deepfilter.dll
+            ThirdParty/deepfilternet/DeepFilterNet3_onnx.tar.gz
+            ThirdParty/deepfilternet/LICENSE-MIT
+            ThirdParty/deepfilternet/LICENSE-APACHE
+          if-no-files-found: error

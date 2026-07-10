@@ -439,14 +439,14 @@ namespace DCSB.ViewModels
             }
         }
 
-        public bool NoiseSuppression
+        public NoiseSuppressionMode NoiseSuppressionMode
         {
-            get { return _configurationModel.NoiseSuppression; }
+            get { return _configurationModel.NoiseSuppressionMode; }
             set
             {
-                _configurationModel.NoiseSuppression = value;
-                _soundManager.NoiseSuppression = value;
-                OnPropertyChanged("NoiseSuppression");
+                _configurationModel.NoiseSuppressionMode = value;
+                _soundManager.NoiseSuppressionMode = value;
+                OnPropertyChanged("NoiseSuppressionMode");
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using DCSB.Models;
 using DCSB.SoundPlayer;
+using DCSB.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -87,10 +88,10 @@ namespace DCSB.Business
             get { return _microphoneMuted ? 0f : _microphoneVolume; }
         }
 
-        // rnnoise on the microphone leg; toggling rebuilds the mic chain on the
+        // denoiser on the microphone leg; switching rebuilds the mic chain on the
         // secondary engine, the capture device itself stays open
-        private bool _noiseSuppression;
-        public bool NoiseSuppression
+        private NoiseSuppressionMode _noiseSuppression;
+        public NoiseSuppressionMode NoiseSuppressionMode
         {
             get { return _noiseSuppression; }
             set
@@ -185,7 +186,7 @@ namespace DCSB.Business
             // before ChangeMicrophoneInput attaches the mic
             _microphoneVolume = configurationModel.MicrophoneVolume / 100f;
             _microphoneMuted = configurationModel.MicrophoneMuted;
-            _noiseSuppression = configurationModel.NoiseSuppression;
+            _noiseSuppression = configurationModel.NoiseSuppressionMode;
 
             configurationModel.PrimaryOutput = ChangePrimaryOutput(configurationModel.PrimaryOutput);
             configurationModel.SecondaryOutput = ChangeSecondaryOutput(configurationModel.SecondaryOutput);
