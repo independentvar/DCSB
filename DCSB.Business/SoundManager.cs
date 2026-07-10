@@ -3,6 +3,7 @@ using DCSB.SoundPlayer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace DCSB.Business
@@ -193,7 +194,9 @@ namespace DCSB.Business
             }
             catch (Exception ex)
             {
-                sound.Error = ex.ToString();
+                Debug.WriteLine(ex);
+                sound.Error = $"Could not play '{Path.GetFileName(file)}': {ex.Message}";
+                return;
             }
             if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
         }

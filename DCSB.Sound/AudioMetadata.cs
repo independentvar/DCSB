@@ -1,28 +1,15 @@
-using NAudio;
-using NAudio.Wave;
 using System;
-using System.Runtime.InteropServices;
 
 namespace DCSB.SoundPlayer
 {
     public static class AudioMetadata
     {
-        // The same decoder fallback chain playback uses (see
-        // AudioPlaybackEngine.PlaySound); the caller owns disposing the reader.
+        // The caller owns disposing the returned reader. Reader selection lives
+        // in AudioReaderFactory so playback, duration and loudness always use
+        // identical codec rules.
         public static IAudioReader OpenReader(string fileName)
         {
-            try
-            {
-                return new FileReader(fileName);
-            }
-            catch (COMException)
-            {
-                return new OggFileReader(fileName);
-            }
-            catch (MmException)
-            {
-                return new MediaFoundationFileReader(fileName);
-            }
+            return AudioReaderFactory.CreateReader(fileName);
         }
 
         // Opens the file just long enough to read its length, then disposes the

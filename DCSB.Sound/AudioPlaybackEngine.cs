@@ -167,9 +167,7 @@ namespace DCSB.SoundPlayer
                 Stop();
             }
 
-            // decoder fallback chain: no ACM MP3 codec (e.g. Windows N editions)
-            // raises MmException and Media Foundation decodes instead
-            IAudioReader input = AudioMetadata.OpenReader(fileName);
+            IAudioReader input = AudioReaderFactory.CreateReader(fileName);
 
             SampleReader reader = new SampleReader(input, loop);
             AddMixerInput(reader, volume, normalizationGain);
@@ -203,8 +201,16 @@ namespace DCSB.SoundPlayer
 
         public void Stop()
         {
+            SampleReader reader = _currentReader;
             _currentReader = null;
             _mixer.RemoveAllMixerInputs();
+            if (reader != null)
+            {
+                // Removing a mixer input does not dispose it. Release the
+                // decoder stream immediately so stopping an Opus (or any other)
+                // clip cannot leave its file locked.
+                reader.Dispose();
+            }
             _soundBranch.IsPaused = false;
             if (_microphoneMixerInput == null)
             {

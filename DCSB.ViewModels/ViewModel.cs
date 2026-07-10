@@ -944,7 +944,13 @@ namespace DCSB.ViewModels
                 bindable.Keys.All(k => k == key || modifiers.Contains(k)));
         }
 
-        private static readonly string[] _supportedSoundExtensions = { ".wma", ".mp3", ".wav", ".ogg", ".m4a", ".aac", ".mp4", ".aiff", ".flac" };
+        // Keep this in sync with OpenFileManager.OpenSoundFiles: files can reach
+        // the sound list through either the picker or a shell drag-and-drop.
+        private static readonly string[] _supportedSoundExtensions =
+        {
+            ".wma", ".mp3", ".wav", ".ogg", ".oga", ".opus", ".m4a",
+            ".aac", ".adts", ".mp4", ".aif", ".aiff", ".flac"
+        };
 
         public ICommand DropSoundFilesCommand
         {
