@@ -149,6 +149,32 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesNoiseSuppression()
+        {
+            ConfigurationModel model = new ConfigurationModel { NoiseSuppression = true };
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.IsTrue(loaded.NoiseSuppression);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutNoiseSuppressionElement_UsesDefault()
+        {
+            // configs written by older versions have no noise suppression element;
+            // the feature must load switched off
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.IsFalse(loaded.NoiseSuppression);
+        }
+
+        [TestMethod]
         public void RoundTrip_PreservesOverlaySettings()
         {
             ConfigurationModel model = new ConfigurationModel { OverlayEnabled = false, OverlayOpacity = 40 };

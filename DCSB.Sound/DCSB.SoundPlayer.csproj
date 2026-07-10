@@ -10,6 +10,10 @@
     <!-- Short test tone for the setup wizard. Embedded (not a loose file) so it ships
          inside the DLL - the installer generator only packages dll/exe/config/json. -->
     <EmbeddedResource Include="beep.wav" />
+    <!-- vendored native rnnoise (see ThirdParty\rnnoise\README.md); copied beside the
+         exe so the NoiseSuppressor P/Invoke finds it, and shipped by the installer
+         generator like any other dll in bin\Release -->
+    <None Include="..\ThirdParty\rnnoise\rnnoise.dll" Link="rnnoise.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
