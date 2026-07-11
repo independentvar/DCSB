@@ -11,8 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.2.3" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.3.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.3.0" />
     <PackageReference Include="Octokit" Version="14.0.0" />
   </ItemGroup>
   <ItemGroup>

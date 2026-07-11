@@ -21,10 +21,10 @@
       },
       "Concentus.Oggfile": {
         "type": "Transitive",
-        "resolved": "1.0.6",
-        "contentHash": "bDd8vP5+cmXR7D93w3LP75sJTClTb8GLOnSaLGtjb9z+wTQ//6UfNo0mtGU5Vtpgf9nYYgn7pFbPAC6isaewyw==",
+        "resolved": "1.0.7",
+        "contentHash": "rKWtI5oiTWqK2ol1aWvIT1BRTPi07Uo1hAet0ysQoZQqFo/mxBRwr+ERw89fIdkL3tbMf3ncoW7b3HDGx8Sk4g==",
         "dependencies": {
-          "Concentus": "2.2.1"
+          "Concentus": "2.2.2"
         }
       },
       "NAudio": {
@@ -117,7 +117,7 @@
         "dependencies": {
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Concentus": "[2.2.2, )",
-          "Concentus.Oggfile": "[1.0.6, )",
+          "Concentus.Oggfile": "[1.0.7, )",
           "DCSB.Models": "[1.0.0, )",
           "NAudio": "[2.3.0, )",
           "NAudio.Vorbis": "[1.5.0, )",
