@@ -42,6 +42,16 @@ namespace DCSB.SoundPlayer
 
         // the most recently started sound; the seekbar tracks and seeks this one
         private volatile SampleReader _currentReader;
+        private readonly object _activeSoundsLock = new object();
+        private readonly List<ActiveSound> _activeSounds = new List<ActiveSound>();
+
+        private sealed class ActiveSound
+        {
+            public object Id { get; set; }
+            public SampleReader Reader { get; set; }
+            public ISampleProvider MixerInput { get; set; }
+            public PausableSampleProvider PauseControl { get; set; }
+        }
 
         public TimeSpan CurrentTime
         {
@@ -77,8 +87,16 @@ namespace DCSB.SoundPlayer
             get
             {
                 SampleReader reader = _currentReader;
-                return reader != null && !reader.IsDisposed && !_soundBranch.IsPaused
-                    && _outputDevice.PlaybackState == PlaybackState.Playing;
+                if (reader == null || reader.IsDisposed || _soundBranch.IsPaused
+                    || _outputDevice.PlaybackState != PlaybackState.Playing)
+                {
+                    return false;
+                }
+                lock (_activeSoundsLock)
+                {
+                    ActiveSound currentSound = _activeSounds.Find(x => ReferenceEquals(x.Reader, reader));
+                    return currentSound != null && !currentSound.PauseControl.IsPaused;
+                }
             }
         }
 
@@ -161,7 +179,7 @@ namespace DCSB.SoundPlayer
         // normalizationGain is a linear factor applied on top of the exponential
         // volume curve (1 = none); the caller computes it from the file's measured
         // loudness so differently mastered clips play equally loud
-        public void PlaySound(string fileName, float volume, bool loop, float normalizationGain = 1f)
+        public void PlaySound(string fileName, float volume, bool loop, float normalizationGain = 1f, object soundId = null)
         {
             if (!Overlap)
             {
@@ -171,7 +189,18 @@ namespace DCSB.SoundPlayer
             IAudioReader input = AudioReaderFactory.CreateReader(fileName);
 
             SampleReader reader = new SampleReader(input, loop);
-            AddMixerInput(reader, volume, normalizationGain);
+            PausableSampleProvider mixerInput = AddMixerInput(reader, volume, normalizationGain);
+            lock (_activeSoundsLock)
+            {
+                RemoveFinishedSounds();
+                _activeSounds.Add(new ActiveSound
+                {
+                    Id = soundId,
+                    Reader = reader,
+                    MixerInput = mixerInput,
+                    PauseControl = mixerInput
+                });
+            }
             _currentReader = reader;
 
             // starting a new sound resumes paused ones, matching the old behavior of
@@ -181,6 +210,62 @@ namespace DCSB.SoundPlayer
             if (_outputDevice.PlaybackState != PlaybackState.Playing)
             {
                 _outputDevice.Play();
+            }
+        }
+
+        public bool IsSoundPlaying(object soundId)
+        {
+            lock (_activeSoundsLock)
+            {
+                RemoveFinishedSounds();
+                return _activeSounds.Exists(x => ReferenceEquals(x.Id, soundId) && !x.Reader.IsDisposed);
+            }
+        }
+
+        public bool IsSoundPaused(object soundId)
+        {
+            lock (_activeSoundsLock)
+            {
+                RemoveFinishedSounds();
+                List<ActiveSound> matchingSounds = _activeSounds.FindAll(x => ReferenceEquals(x.Id, soundId));
+                return matchingSounds.Count != 0 && matchingSounds.TrueForAll(x => x.PauseControl.IsPaused);
+            }
+        }
+
+        public void SetSoundPaused(object soundId, bool paused)
+        {
+            lock (_activeSoundsLock)
+            {
+                RemoveFinishedSounds();
+                foreach (ActiveSound sound in _activeSounds.FindAll(x => ReferenceEquals(x.Id, soundId)))
+                {
+                    sound.PauseControl.IsPaused = paused;
+                }
+            }
+            if (!paused && _outputDevice.PlaybackState != PlaybackState.Playing)
+            {
+                _outputDevice.Play();
+            }
+        }
+
+        public void StopSound(object soundId)
+        {
+            List<ActiveSound> soundsToStop;
+            lock (_activeSoundsLock)
+            {
+                RemoveFinishedSounds();
+                soundsToStop = _activeSounds.FindAll(x => ReferenceEquals(x.Id, soundId));
+                _activeSounds.RemoveAll(x => ReferenceEquals(x.Id, soundId));
+                if (soundsToStop.Exists(x => ReferenceEquals(x.Reader, _currentReader)))
+                {
+                    _currentReader = FindMostRecentReader();
+                }
+            }
+
+            foreach (ActiveSound sound in soundsToStop)
+            {
+                _mixer.RemoveMixerInput(sound.MixerInput);
+                sound.Reader.Dispose();
             }
         }
 
@@ -202,15 +287,20 @@ namespace DCSB.SoundPlayer
 
         public void Stop()
         {
-            SampleReader reader = _currentReader;
+            List<ActiveSound> activeSounds;
+            lock (_activeSoundsLock)
+            {
+                activeSounds = new List<ActiveSound>(_activeSounds);
+                _activeSounds.Clear();
+            }
             _currentReader = null;
             _mixer.RemoveAllMixerInputs();
-            if (reader != null)
+            foreach (ActiveSound sound in activeSounds)
             {
                 // Removing a mixer input does not dispose it. Release the
                 // decoder stream immediately so stopping an Opus (or any other)
                 // clip cannot leave its file locked.
-                reader.Dispose();
+                sound.Reader.Dispose();
             }
             _soundBranch.IsPaused = false;
             if (_microphoneMixerInput == null)
@@ -301,11 +391,30 @@ namespace DCSB.SoundPlayer
             return new WdlResamplingSampleProvider(input, _mixer.WaveFormat.SampleRate);
         }
 
-        private void AddMixerInput(ISampleProvider input, float volume, float normalizationGain)
+        private PausableSampleProvider AddMixerInput(ISampleProvider input, float volume, float normalizationGain)
         {
             ISampleProvider convertedInput = ConvertToRightSampleRate(ConvertToRightChannelCount(input));
             VolumeSampleProvider volumeSampleProvider = new VolumeSampleProvider(convertedInput) { Volume = AdjustVolume(volume) * normalizationGain };
-            _mixer.AddMixerInput(volumeSampleProvider);
+            PausableSampleProvider pauseControl = new PausableSampleProvider(volumeSampleProvider);
+            _mixer.AddMixerInput(pauseControl);
+            return pauseControl;
+        }
+
+        private void RemoveFinishedSounds()
+        {
+            _activeSounds.RemoveAll(x => x.Reader.IsDisposed);
+        }
+
+        private SampleReader FindMostRecentReader()
+        {
+            for (int index = _activeSounds.Count - 1; index >= 0; index--)
+            {
+                if (!_activeSounds[index].Reader.IsDisposed)
+                {
+                    return _activeSounds[index].Reader;
+                }
+            }
+            return null;
         }
 
         private float AdjustVolume(float volume)

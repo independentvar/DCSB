@@ -1,4 +1,4 @@
-﻿using DCSB.Utils;
+using DCSB.Utils;
 using System.Collections.ObjectModel;
 using System.Xml.Serialization;
 using System.IO;
@@ -11,6 +11,13 @@ using System.Threading;
 
 namespace DCSB.Models
 {
+    public enum PressAgainBehavior
+    {
+        Restart,
+        Stop,
+        Pause
+    }
+
     public class Sound : ObservableObject, IBindable, ICloneable
     {
         private SynchronizationContext _synchronizationContext;
@@ -70,6 +77,17 @@ namespace DCSB.Models
             }
         }
 
+        private PressAgainBehavior _pressAgainBehavior;
+        public PressAgainBehavior PressAgainBehavior
+        {
+            get { return _pressAgainBehavior; }
+            set
+            {
+                _pressAgainBehavior = value;
+                OnPropertyChanged("PressAgainBehavior");
+            }
+        }
+
         private string _error;
         [XmlIgnore]
         public string Error
@@ -120,11 +138,12 @@ namespace DCSB.Models
             _files.CollectionChanged += (sender, e) => RecalculateDuration();
 
             Volume = 100;
+            PressAgainBehavior = PressAgainBehavior.Pause;
         }
 
         public object Clone()
         {
-            Sound clonedSound = new Sound() { Name = Name, Volume = Volume, Loop = Loop };
+            Sound clonedSound = new Sound() { Name = Name, Volume = Volume, Loop = Loop, PressAgainBehavior = PressAgainBehavior };
             foreach (string file in Files) clonedSound.Files.Add(file);
             foreach (VKey key in Keys) clonedSound.Keys.Add(key);
             return clonedSound;

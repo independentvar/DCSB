@@ -1,4 +1,4 @@
-﻿using DCSB.Models;
+using DCSB.Models;
 using DCSB.SoundPlayer;
 using DCSB.Utils;
 using NAudio.Wave;
@@ -331,8 +331,8 @@ namespace DCSB.Business
                 // unity while the file's loudness is still unmeasured (GetGain then
                 // kicks off the measurement, so the next play is normalized)
                 float normalizationGain = _normalizeVolume ? LoudnessNormalization.GetGain(file) : 1f;
-                if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
-                if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
+                if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain, sound);
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain, sound);
             }
             catch (Exception ex)
             {
@@ -341,6 +341,32 @@ namespace DCSB.Business
                 return;
             }
             if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
+        }
+
+        // Global sound shortcuts use toggle semantics when enabled for that sound.
+        // The regular Play command deliberately still restarts/layers the sound.
+        public void Toggle(Sound sound)
+        {
+            bool isPlaying = (_primarySoundPlayer != null && _primarySoundPlayer.IsSoundPlaying(sound))
+                || (_secondarySoundPlayer != null && _secondarySoundPlayer.IsSoundPlaying(sound));
+            if (isPlaying && sound.PressAgainBehavior == PressAgainBehavior.Stop)
+            {
+                if (_primarySoundPlayer != null) _primarySoundPlayer.StopSound(sound);
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.StopSound(sound);
+                return;
+            }
+
+            if (isPlaying && sound.PressAgainBehavior == PressAgainBehavior.Pause)
+            {
+                bool isPaused = (_primarySoundPlayer != null && _primarySoundPlayer.IsSoundPaused(sound))
+                    || (_secondarySoundPlayer != null && _secondarySoundPlayer.IsSoundPaused(sound));
+                if (_primarySoundPlayer != null) _primarySoundPlayer.SetSoundPaused(sound, !isPaused);
+                if (_secondarySoundPlayer != null) _secondarySoundPlayer.SetSoundPaused(sound, !isPaused);
+                if (isPaused && PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
+                return;
+            }
+
+            Play(sound);
         }
 
         // position of the most recently started sound; both outputs play the same

@@ -49,7 +49,7 @@ Or just run **Settings → Other → Run setup wizard**, which walks you through
 
 For each sound you can set:
 
-- **Name** and **key or key combination** (keyboard or mouse) to play it
+- **Name** and **key or key combination** (keyboard or mouse) to play it; configure repeated presses to restart/layer, stop, or pause/resume each sound
 - **One or more sound files** — a random one plays each time, great for variety
 - **Volume** per sound and whether to **loop**
 
