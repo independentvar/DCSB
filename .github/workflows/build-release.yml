@@ -25,6 +25,10 @@ jobs:
   build:
     runs-on: windows-2025
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     outputs:
       release_required: ${{ steps.changes.outputs.release_required }}
       version: ${{ steps.version.outputs.version }}
@@ -92,6 +96,12 @@ jobs:
         working-directory: Installer scripts
         shell: pwsh
         run: '& "${env:ProgramFiles(x86)}\NSIS\makensis.exe" CreateInstaller.nsi'
+
+      - name: Attest installer provenance
+        if: steps.changes.outputs.release_required == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: Installers/DCSB_*.exe
 
       - name: Upload installer artifact
         if: steps.changes.outputs.release_required == 'true' || github.event_name == 'workflow_dispatch'

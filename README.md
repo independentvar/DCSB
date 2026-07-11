@@ -14,7 +14,7 @@ A free, open source soundboard and death counter for Windows, made for gamers an
 - **Death counter for streams** — each counter writes its count (with a custom text format) to a text file that OBS or other streaming software can show on stream.
 - **Wide format support** — mp3, wav, ogg (Vorbis and Opus), opus, m4a, aac, mp4, wma, aiff, and flac, with volume normalization across sounds so nothing blows your ears out.
 - **Presets** — switch between whole sets of sounds and counters for different games, even with a hotkey.
-- **No nonsense** — free, open source, no ads, no accounts. One-click updates from GitHub releases, and each release is scanned with VirusTotal.
+- **No nonsense** — free, open source, no ads, no accounts. One-click updates from GitHub releases; new installers are scanned with VirusTotal and include GitHub build-provenance attestations.
 
 ## How to install
 
@@ -27,6 +27,14 @@ A free, open source soundboard and death counter for Windows, made for gamers an
 To update, just install a newer version the same way — it replaces the old one (the app also offers one-click updates when a new version is out). To uninstall, use **Add or remove programs** in Windows Settings.
 
 DCSB needs the **.NET 10 Desktop Runtime (x64)**; if it's missing, the installer points you to the download page.
+
+To verify that a newly released installer was built by this repository's GitHub Actions workflow, install the [GitHub CLI](https://cli.github.com/) and run:
+
+```powershell
+gh attestation verify .\DCSB_4.1.0.0.exe --repo independentvar/DCSB
+```
+
+Replace the example filename with the installer you downloaded.
 
 ## Using it in Discord or a game
 
