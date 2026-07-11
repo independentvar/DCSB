@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
@@ -15,6 +16,7 @@ using System.Threading.Tasks;
 using System.Security.Principal;
 using System.Diagnostics;
 using System.Windows.Threading;
+using DCSB.SoundPlayer;
 
 namespace DCSB.ViewModels
 {
@@ -102,9 +104,18 @@ namespace DCSB.ViewModels
                 OnPropertyChanged("MicrophoneLevel");
             };
 
-            // e.g. the microphone was unplugged - show the selection as Disabled
-            // instead of failing silently
-            _soundManager.MicrophoneFailed += (sender, e) => MicrophoneInput = DCSB.SoundPlayer.MicrophoneInput.DisabledDeviceName;
+            // e.g. the microphone was unplugged - update the visible selection without
+            // calling ChangeMicrophoneInput again, which would clear the retained reason.
+            _soundManager.MicrophoneFailed += (sender, e) => RunOnUiThread(() =>
+            {
+                _configurationModel.MicrophoneInput = DCSB.SoundPlayer.MicrophoneInput.DisabledDeviceName;
+                _microphoneLevel = 0;
+                OnPropertyChanged(nameof(MicrophoneInput));
+                OnPropertyChanged(nameof(MicrophoneLevel));
+                RecomputeWarnings();
+            });
+            _soundManager.RuntimeWarningsChanged += (sender, e) => RunOnUiThread(RecomputeWarnings);
+            RecomputeWarnings();
 
             // while a sound plays covered/minimized, no window event fires when the
             // cover goes away (e.g. the game closes); retry once a second until the
@@ -370,6 +381,7 @@ namespace DCSB.ViewModels
                 _configurationModel.PrimaryDeviceVolume = (int)value;
                 _soundManager.PrimaryDeviceVolume = _configurationModel.PrimaryDeviceVolume / 100f;
                 OnPropertyChanged("PrimaryDeviceVolume");
+                RecomputeWarnings();
             }
         }
 
@@ -381,6 +393,7 @@ namespace DCSB.ViewModels
                 _configurationModel.SecondaryDeviceVolume = (int)value;
                 _soundManager.SecondaryDeviceVolume = _configurationModel.SecondaryDeviceVolume / 100f;
                 OnPropertyChanged("SecondaryDeviceVolume");
+                RecomputeWarnings();
             }
         }
 
@@ -436,6 +449,7 @@ namespace DCSB.ViewModels
                 string selectedDeviceName = _soundManager.ChangePrimaryOutput(value);
                 _configurationModel.PrimaryOutput = selectedDeviceName;
                 OnPropertyChanged("PrimaryOutput");
+                RecomputeWarnings();
             }
         }
 
@@ -450,6 +464,7 @@ namespace DCSB.ViewModels
                 string selectedDeviceName = _soundManager.ChangeSecondaryOutput(value);
                 _configurationModel.SecondaryOutput = selectedDeviceName;
                 OnPropertyChanged("SecondaryOutput");
+                RecomputeWarnings();
             }
         }
 
@@ -497,6 +512,7 @@ namespace DCSB.ViewModels
                 _microphoneLevel = 0;
                 OnPropertyChanged("MicrophoneInput");
                 OnPropertyChanged("MicrophoneLevel");
+                RecomputeWarnings();
             }
         }
 
@@ -508,6 +524,7 @@ namespace DCSB.ViewModels
                 _configurationModel.MicrophoneVolume = (int)value;
                 _soundManager.MicrophoneVolume = _configurationModel.MicrophoneVolume / 100f;
                 OnPropertyChanged("MicrophoneVolume");
+                RecomputeWarnings();
             }
         }
 
@@ -519,6 +536,7 @@ namespace DCSB.ViewModels
                 _configurationModel.MicrophoneMuted = value;
                 _soundManager.MicrophoneMuted = value;
                 OnPropertyChanged("MicrophoneMuted");
+                RecomputeWarnings();
             }
         }
 
@@ -530,7 +548,78 @@ namespace DCSB.ViewModels
                 _configurationModel.NoiseSuppressionMode = value;
                 _soundManager.NoiseSuppressionMode = value;
                 OnPropertyChanged("NoiseSuppressionMode");
+                RecomputeWarnings();
             }
+        }
+
+        public ObservableCollection<string> Warnings { get; } = new ObservableCollection<string>();
+
+        private void RecomputeWarnings()
+        {
+            List<string> warnings = new List<string>(_soundManager.RuntimeWarnings);
+            string primary = _configurationModel.PrimaryOutput;
+            string secondary = _configurationModel.SecondaryOutput;
+            string microphone = _configurationModel.MicrophoneInput;
+            bool primaryEnabled = primary != AudioPlaybackEngine.DisabledDeviceName;
+            bool secondaryEnabled = secondary != AudioPlaybackEngine.DisabledDeviceName;
+            bool microphoneEnabled = !string.IsNullOrEmpty(microphone)
+                && microphone != DCSB.SoundPlayer.MicrophoneInput.DisabledDeviceName;
+
+            if (!primaryEnabled && !secondaryEnabled)
+            {
+                warnings.Add("Both output devices are disabled; soundboard audio has nowhere to play.");
+            }
+            else if (primaryEnabled && secondaryEnabled && AudioPlaybackEngine.AreSameDevice(primary, secondary))
+            {
+                warnings.Add("The first and second outputs are the same device; every sound will be played twice.");
+            }
+
+            if (microphoneEnabled)
+            {
+                if (!secondaryEnabled)
+                {
+                    warnings.Add("Microphone passthrough is enabled, but the second output is disabled; your voice has nowhere to go.");
+                }
+                else
+                {
+                    if (!LooksLikeVirtualCable(secondary))
+                    {
+                        warnings.Add($"The second output ('{secondary}') does not look like a virtual cable; microphone passthrough may not reach voice chat.");
+                    }
+                    if (LooksLikeVirtualCable(microphone))
+                    {
+                        warnings.Add($"The selected microphone ('{microphone}') looks like a virtual cable, not your real microphone; this may cause silence or an audio loop.");
+                    }
+                    if (_configurationModel.SecondaryDeviceVolume == 0)
+                    {
+                        warnings.Add("The second output volume is 0; voice can pass through, but voice chat will not hear soundboard audio.");
+                    }
+                }
+
+                if (_configurationModel.MicrophoneMuted || _configurationModel.MicrophoneVolume == 0)
+                {
+                    warnings.Add("The microphone is muted; voice chat will not hear your voice.");
+                }
+            }
+
+            Warnings.Clear();
+            foreach (string warning in warnings.Distinct()) Warnings.Add(warning);
+        }
+
+        private static bool LooksLikeVirtualCable(string deviceName)
+        {
+            if (string.IsNullOrWhiteSpace(deviceName)) return false;
+            string name = deviceName.ToLowerInvariant();
+            return name.Contains("cable") || name.Contains("voicemeeter")
+                || name.Contains("virtual audio") || name.Contains("virtual-audio")
+                || name.Contains("blackhole") || name.Contains("loopback");
+        }
+
+        private static void RunOnUiThread(Action action)
+        {
+            Dispatcher dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess()) dispatcher.BeginInvoke(action);
+            else action();
         }
 
         // peak of the captured microphone signal (0..1); lets the user see in the
@@ -657,6 +746,9 @@ namespace DCSB.ViewModels
         }
         private void OpenSettings()
         {
+            OnPropertyChanged(nameof(AvailableOutputs));
+            OnPropertyChanged(nameof(AvailableInputs));
+            RecomputeWarnings();
             _applicationStateModel.SettingsOpened = true;
         }
 
