@@ -7,6 +7,8 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading.Tasks;
 
 namespace DCSB.Business
@@ -222,6 +224,97 @@ namespace DCSB.Business
             return AudioMetadata.GetDuration(file);
         }
 
+        // Opens a file through the same decoder chain used by playback. A null
+        // result means the file is ready to play; otherwise the returned text is
+        // safe to show directly in the sound-list tooltip.
+        public static string ValidateSoundFile(string file)
+        {
+            IAudioReader reader = null;
+            try
+            {
+                reader = AudioMetadata.OpenReader(file);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return GetUserFriendlySoundError(ex);
+            }
+            finally
+            {
+                if (reader != null) reader.Dispose();
+            }
+        }
+
+        public static string GetUserFriendlySoundError(Exception exception)
+        {
+            if (ContainsException<FileNotFoundException>(exception)
+                || ContainsException<DirectoryNotFoundException>(exception))
+            {
+                return "File is missing — was it moved or deleted?";
+            }
+
+            if (ContainsException<UnauthorizedAccessException>(exception)
+                || ContainsException<SecurityException>(exception))
+            {
+                return "DCSB doesn't have permission to read this file.";
+            }
+
+            // AudioReaderFactory aggregates failures from every decoder. Keep
+            // that implementation detail (and Media Foundation error codes) out
+            // of the UI.
+            if (exception is AggregateException
+                || ContainsException<InvalidDataException>(exception)
+                || ContainsException<NotSupportedException>(exception))
+            {
+                return "This file's format isn't supported.";
+            }
+
+            if (ContainsException<COMException>(exception)
+                || ContainsException<ObjectDisposedException>(exception)
+                || ContainsExceptionNamed(exception, "MmException"))
+            {
+                return "Output device unavailable.";
+            }
+
+            if (ContainsException<IOException>(exception))
+            {
+                return "This file couldn't be read. It may be damaged or in use.";
+            }
+
+            return "This sound couldn't be played. Check the file and output device.";
+        }
+
+        private static bool ContainsException<T>(Exception exception) where T : Exception
+        {
+            if (exception is T) return true;
+            AggregateException aggregate = exception as AggregateException;
+            if (aggregate != null)
+            {
+                foreach (Exception inner in aggregate.InnerExceptions)
+                {
+                    if (ContainsException<T>(inner)) return true;
+                }
+                return false;
+            }
+            return exception.InnerException != null && ContainsException<T>(exception.InnerException);
+        }
+
+        private static bool ContainsExceptionNamed(Exception exception, string typeName)
+        {
+            if (exception.GetType().Name == typeName) return true;
+            AggregateException aggregate = exception as AggregateException;
+            if (aggregate != null)
+            {
+                foreach (Exception inner in aggregate.InnerExceptions)
+                {
+                    if (ContainsExceptionNamed(inner, typeName)) return true;
+                }
+                return false;
+            }
+            return exception.InnerException != null && ContainsExceptionNamed(exception.InnerException, typeName);
+        }
+
         public void Play(Sound sound)
         {
             if (sound.Files.Count == 0)
@@ -230,18 +323,21 @@ namespace DCSB.Business
             }
 
             string file = sound.Files[_random.Next(sound.Files.Count)];
-            // unity while the file's loudness is still unmeasured (GetGain then
-            // kicks off the measurement, so the next play is normalized)
-            float normalizationGain = _normalizeVolume ? LoudnessNormalization.GetGain(file) : 1f;
             try
             {
+                // A previous failure must not leave a permanent red dot once the
+                // sound works again. Any new failure below replaces this value.
+                sound.Error = null;
+                // unity while the file's loudness is still unmeasured (GetGain then
+                // kicks off the measurement, so the next play is normalized)
+                float normalizationGain = _normalizeVolume ? LoudnessNormalization.GetGain(file) : 1f;
                 if (_primarySoundPlayer != null) _primarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
                 if (_secondarySoundPlayer != null) _secondarySoundPlayer.PlaySound(file, sound.Volume / 100f, sound.Loop, normalizationGain);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                sound.Error = $"Could not play '{Path.GetFileName(file)}': {ex.Message}";
+                sound.Error = $"Could not play '{Path.GetFileName(file)}': {GetUserFriendlySoundError(ex)}";
                 return;
             }
             if (PlaybackStarted != null) PlaybackStarted(this, EventArgs.Empty);
