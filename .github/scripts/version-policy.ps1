@@ -6,12 +6,7 @@ param(
     [string]$HeadRef = 'HEAD',
 
     [ValidateSet('Direct', 'MergeBase')]
-    [string]$DiffMode = 'Direct',
-
-    # Report whether a bump is required without asserting that one was made.
-    # The auto-bump workflow uses this to detect an as-yet-unbumped PR (which the
-    # default validating behaviour would reject) so it can supply the bump.
-    [switch]$ReportOnly
+    [string]$DiffMode = 'Direct'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -88,8 +83,6 @@ $shippedFiles | ForEach-Object { Write-Host "  $_" }
 # invocation both to validate the bump and to decide whether a release is due.
 if (-not $requiresBump) {
     Write-Host 'No AssemblyVersion bump is required.'
-} elseif ($ReportOnly) {
-    Write-Host 'Shipped code changed; a bump is required (report-only: not validating the increase).'
 } elseif ($BaseRef -match '^0+$') {
     Write-Host 'Initial push: no earlier version is available for comparison.'
 } else {
