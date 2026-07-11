@@ -13,6 +13,7 @@ namespace DCSB
         // global hotkeys use RIDEV_INPUTSINK, so two running instances would both
         // react to every shortcut - allow only one instance per session
         private const string MutexName = "DCSB_SingleInstance_2E8A0F3C";
+        private const string ElevatedRestartArgument = "--restart-elevated";
 
         internal static readonly int ShowExistingInstanceMessage =
             RegisterWindowMessage("DCSB_ShowExistingInstance");
@@ -25,6 +26,20 @@ namespace DCSB
         protected override void OnStartup(StartupEventArgs e)
         {
             _singleInstanceMutex = new Mutex(true, MutexName, out _ownsMutex);
+            if (!_ownsMutex && Array.IndexOf(e.Args, ElevatedRestartArgument) >= 0)
+            {
+                try
+                {
+                    // The non-elevated instance launches us before shutting down, so
+                    // allow it time to dispose audio/input resources and release the
+                    // per-session mutex. Normal second launches still exit immediately.
+                    _ownsMutex = _singleInstanceMutex.WaitOne(TimeSpan.FromSeconds(15));
+                }
+                catch (AbandonedMutexException)
+                {
+                    _ownsMutex = true;
+                }
+            }
             if (!_ownsMutex)
             {
                 // another instance is already running - ask it to show its window

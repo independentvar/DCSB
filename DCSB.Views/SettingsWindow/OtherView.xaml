@@ -30,6 +30,20 @@
                 <CheckBox IsChecked="{Binding ConfigurationModel.MinimizeToTray}">Minimize to tray</CheckBox>
             </GroupBox>
 
+            <GroupBox Header="Administrator access"
+                      Visibility="{Binding NotAdministrator}">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap"
+                               Margin="0,0,0,6"
+                               Text="DCSB works without administrator access for most games. If a game or launcher runs as administrator, Windows may prevent DCSB from receiving global hotkeys while it is focused." />
+                    <Button Content="Learn more or restart as administrator…"
+                            Command="{Binding OpenNotAdministratorCommand}"
+                            HorizontalAlignment="Left"
+                            Padding="10,3"
+                            ToolTip="Explain why elevated games can block DCSB hotkeys and offer to restart DCSB as administrator." />
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="Setup">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap"

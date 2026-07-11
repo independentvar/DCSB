@@ -114,7 +114,9 @@ namespace DCSB
 
             Preset preset = (DataContext as ViewModel)?.ConfigurationModel?.SelectedPreset;
 
-            if (preset == null || !preset.OverlayCustomized)
+            bool showAdministratorWarning = (DataContext as ViewModel)?.AdministratorOverlayWarningVisibility
+                == Visibility.Visible;
+            if (preset == null || !preset.OverlayCustomized || showAdministratorWarning)
             {
                 // automatic layout: a content-sized pill centred at the top of the
                 // monitor, exactly like the overlay looked before it was adjustable

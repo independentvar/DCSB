@@ -80,6 +80,7 @@ Create presets to switch between whole lists of counters and sounds for differen
 ## Other features
 
 - In-game overlay showing your sounds and hotkeys over fullscreen games (use borderless fullscreen; true exclusive fullscreen can hide it)
+- Automatic in-game overlay warning when a fullscreen elevated game can prevent a non-administrator DCSB from receiving global hotkeys, with one-click restart as administrator
 - Backup and restore all settings and key bindings to a file
 - Minimize to tray, single-instance, enable/disable or show/hide the counter and sound panels
 - Automatic update check with one-click install of new versions

@@ -48,6 +48,15 @@
                     <TextBlock Margin="5,5,5,5"
                                TextWrapping="Wrap"
                                Foreground="Gray">
+                        DCSB always shows an administrator warning over a fullscreen
+                        game running with elevated permissions, even when the sound
+                        overlay is disabled. Restart DCSB as administrator so global
+                        hotkeys can reach that game.
+                    </TextBlock>
+
+                    <TextBlock Margin="5,5,5,5"
+                               TextWrapping="Wrap"
+                               Foreground="Gray">
                         Note: games running in true exclusive fullscreen can bypass
                         Windows composition and hide the overlay. If the overlay does
                         not appear in your game, switch the game's display mode to
