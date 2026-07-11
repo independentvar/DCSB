@@ -110,6 +110,10 @@ jobs:
     environment: release
     permissions:
       contents: write
+    # This job intentionally has no checkout, so gh cannot infer the repository
+    # from a git remote. Set it explicitly so `gh release` commands work.
+    env:
+      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download installer
