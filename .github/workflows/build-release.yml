@@ -171,7 +171,7 @@ jobs:
           $installer = Get-ChildItem "Installers/DCSB_*.exe" | Select-Object -First 1
           if (-not $installer) { throw 'Installer not found.' }
 
-          $uploadResponse = curl.exe --fail-with-body --silent --show-error `
+          $uploadResponse = curl --fail-with-body --silent --show-error `
             -X POST 'https://www.virustotal.com/api/v3/files' `
             -H "x-apikey: $env:VIRUSTOTAL_API_KEY" `
             -F "file=@$($installer.FullName)"
@@ -183,7 +183,7 @@ jobs:
           $statusJson = $null
           for ($i = 0; $i -lt 60; $i++) {
             Start-Sleep -Seconds 5
-            $statusResponse = curl.exe --fail-with-body --silent --show-error `
+            $statusResponse = curl --fail-with-body --silent --show-error `
               -H "x-apikey: $env:VIRUSTOTAL_API_KEY" `
               "https://www.virustotal.com/api/v3/analyses/$analysisId"
             if ($LASTEXITCODE -ne 0) { continue }
