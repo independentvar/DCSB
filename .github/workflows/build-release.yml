@@ -120,12 +120,16 @@ jobs:
     environment: release
     permissions:
       contents: write
-    # This job intentionally has no checkout, so gh cannot infer the repository
-    # from a git remote. Set it explicitly so `gh release` commands work.
     env:
       GH_REPO: ${{ github.repository }}
 
     steps:
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
       - name: Download installer
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -145,6 +149,40 @@ jobs:
             throw "Tag $tag already exists; refusing to replace an existing release."
           }
           Write-Host "Tag $tag is available."
+
+      - name: Create and push signed version tag
+        shell: pwsh
+        env:
+          RELEASE_TAG_SIGNING_KEY: ${{ secrets.RELEASE_TAG_SIGNING_KEY }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if (-not $env:RELEASE_TAG_SIGNING_KEY) {
+            throw 'The RELEASE_TAG_SIGNING_KEY secret is not configured.'
+          }
+
+          $keyPath = Join-Path $env:RUNNER_TEMP 'release-tag-signing-key'
+          $allowedSignersPath = Join-Path $env:RUNNER_TEMP 'allowed-signers'
+          $normalizedKey = $env:RELEASE_TAG_SIGNING_KEY -replace "`r`n", "`n"
+          [IO.File]::WriteAllText($keyPath, $normalizedKey + "`n", [Text.UTF8Encoding]::new($false))
+          chmod 600 $keyPath
+
+          $publicKey = ssh-keygen -y -f $keyPath
+          if ($LASTEXITCODE -ne 0 -or -not $publicKey) { throw 'Could not read the release tag signing key.' }
+          [IO.File]::WriteAllText($allowedSignersPath, "17456465+independentvar@users.noreply.github.com $publicKey`n", [Text.UTF8Encoding]::new($false))
+
+          git config user.name 'independentvar'
+          git config user.email '17456465+independentvar@users.noreply.github.com'
+          git config gpg.format ssh
+          git config user.signingkey $keyPath
+          git config gpg.ssh.allowedSignersFile $allowedSignersPath
+
+          $tag = "v$env:VERSION"
+          git tag --sign $tag --message "DCSB $env:VERSION" $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not create signed tag $tag." }
+          git tag --verify $tag
+          if ($LASTEXITCODE -ne 0) { throw "Local signature verification failed for $tag." }
+          git push origin "refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw "Could not push signed tag $tag." }
 
       - name: Create draft release
         id: create_release
