@@ -11,6 +11,7 @@
         <Converters:ConcatStringsConverter x:Key="concatStringsConverter" />
         <Converters:VKeysToStringConverter x:Key="vKeysToStringConverter" />
         <Converters:AreEqualConverter x:Key="areEqualConverter" />
+        <BooleanToVisibilityConverter x:Key="booleanToVisibilityConverter" />
     </UserControl.Resources>
 
     <Grid>
@@ -20,11 +21,12 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition />
-            <RowDefinition />
-            <RowDefinition />
-            <RowDefinition />
-            <RowDefinition />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Label Grid.Row="0" Grid.Column="0">Name:</Label>
@@ -52,13 +54,29 @@
             </Controls:ShortcutBox.IsActive>
         </Controls:ShortcutBox>
 
-        <Label Grid.Row="3" Grid.Column="0">Volume:</Label>
-        <Slider Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="5" Maximum="100" AutoToolTipPlacement="BottomRight"
+        <Label Grid.Row="3" Grid.Column="0"
+               Visibility="{Binding IsMidiInputEnabled, Converter={StaticResource booleanToVisibilityConverter}}">MIDI:</Label>
+        <Controls:ShortcutBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="5"
+                              AutomationProperties.Name="MIDI binding"
+                              Placeholder="Click to set MIDI binding"
+                              ListeningText="Press a MIDI pad…"
+                              CaptureMouseButtons="False"
+                              ToolTip="Select a MIDI input device in Settings > Input first."
+                              Text="{Binding ApplicationStateModel.ModifiedSound.MidiBinding.DisplayName, Mode=OneWay}"
+                              IsActive="{Binding ApplicationStateModel.ModifiedSound.IsMidiLearning, Mode=OneWay}"
+                              Command="{Binding LearnMidiCommand}"
+                              CommandParameter="{Binding ApplicationStateModel.ModifiedSound}"
+                              ClearCommand="{Binding ClearMidiBindingCommand}"
+                              ClearCommandParameter="{Binding ApplicationStateModel.ModifiedSound}"
+                              Visibility="{Binding IsMidiInputEnabled, Converter={StaticResource booleanToVisibilityConverter}}" />
+
+        <Label Grid.Row="4" Grid.Column="0">Volume:</Label>
+        <Slider Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="5" Maximum="100" AutoToolTipPlacement="BottomRight"
                 IsMoveToPointEnabled="True" ToolTip="Change applies next time you play this sound"
                 Value="{Binding ApplicationStateModel.ModifiedSound.Volume}"/>
 
-        <Label Grid.Row="4" Grid.Column="0">Playback:</Label>
-        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+        <Label Grid.Row="5" Grid.Column="0">Playback:</Label>
+        <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
             <CheckBox Margin="5" ToolTip="Change applies next time you play this sound"
                       IsChecked="{Binding ApplicationStateModel.ModifiedSound.Loop}">Loop</CheckBox>
             <Label Margin="12,0,0,0">Press again:</Label>

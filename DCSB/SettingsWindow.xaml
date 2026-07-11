@@ -20,6 +20,10 @@
             <Views:SoundView />
         </TabItem>
 
+        <TabItem Header="Input">
+            <Views:InputView />
+        </TabItem>
+
         <TabItem Header="Presets">
             <Views:PresetConfigurationView DataContext="{Binding PresetConfigurationViewModel}" />
         </TabItem>

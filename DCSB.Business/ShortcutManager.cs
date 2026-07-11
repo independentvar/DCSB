@@ -106,6 +106,34 @@ namespace DCSB.Business
             }
         }
 
+        public void MidiMessage(int channel, MidiMessageKind kind, int number)
+        {
+            if (_applicationStateModel.ModifiedMidiSound != null)
+            {
+                Sound learningSound = _applicationStateModel.ModifiedMidiSound;
+                learningSound.MidiBinding = new MidiBinding
+                {
+                    Channel = channel,
+                    Kind = kind,
+                    Number = number
+                };
+                learningSound.IsMidiLearning = false;
+                _applicationStateModel.ModifiedMidiSound = null;
+                return;
+            }
+
+            if (_configurationModel.Enable != DisplayOption.Sounds && _configurationModel.Enable != DisplayOption.Both)
+                return;
+
+            Sound sound = _configurationModel.SelectedPreset.SoundCollection.FirstOrDefault(x =>
+                x.Files.Count != 0 && x.MidiBinding != null && x.MidiBinding.Matches(channel, kind, number));
+            if (sound != null)
+            {
+                _configurationModel.SelectedPreset.SelectedSound = sound;
+                _soundManager.Toggle(sound);
+            }
+        }
+
         private T ResolveShortcut<T>(VKey key, IEnumerable<VKey> pressedKeys, IEnumerable<T> items) where T : IBindable
         {
             return items.Where(x => x.Keys.Contains(key) && x.Keys.All(y => pressedKeys.Contains(y))).OrderBy(x => x.Keys.Count).LastOrDefault();

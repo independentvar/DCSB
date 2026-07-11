@@ -70,6 +70,39 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void RoundTrip_PreservesMidiDeviceAndSoundBinding()
+        {
+            ConfigurationModel model = new ConfigurationModel { MidiInputDevice = "loopMIDI Port" };
+            Preset preset = new Preset { Name = "MIDI" };
+            preset.SoundCollection.Add(new Sound
+            {
+                Name = "Air horn",
+                MidiBinding = new MidiBinding { Channel = 2, Kind = MidiMessageKind.ControlChange, Number = 41 }
+            });
+            model.PresetCollection.Add(preset);
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.AreEqual("loopMIDI Port", loaded.MidiInputDevice);
+            MidiBinding binding = loaded.PresetCollection[0].SoundCollection[0].MidiBinding;
+            Assert.IsNotNull(binding);
+            Assert.AreEqual(2, binding.Channel);
+            Assert.AreEqual(MidiMessageKind.ControlChange, binding.Kind);
+            Assert.AreEqual(41, binding.Number);
+        }
+
+        [TestMethod]
+        public void Deserialize_ConfigWithoutMidiElements_LeavesMidiDisabled()
+        {
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><Volume>80</Volume></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            using StringReader reader = new StringReader(oldConfig);
+            ConfigurationModel loaded = (ConfigurationModel)serializer.Deserialize(reader);
+
+            Assert.IsNull(loaded.MidiInputDevice);
+        }
+
+        [TestMethod]
         public void Deserialize_LegacySoundWithoutPressAgainBehavior_DefaultsToPause()
         {
             string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><PresetCollection><Preset><SoundCollection><Sound><Name>Legacy</Name></Sound></SoundCollection></Preset></PresetCollection></ConfigurationModel>";

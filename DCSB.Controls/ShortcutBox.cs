@@ -63,6 +63,25 @@ namespace DCSB.Controls
             set { SetValue(PlaceholderProperty, value); }
         }
 
+        public static readonly DependencyProperty ListeningTextProperty = DependencyProperty.Register(
+            nameof(ListeningText), typeof(string), typeof(ShortcutBox),
+            new PropertyMetadata("Press a key or click here — Esc to cancel"));
+
+        public string ListeningText
+        {
+            get { return (string)GetValue(ListeningTextProperty); }
+            set { SetValue(ListeningTextProperty, value); }
+        }
+
+        public static readonly DependencyProperty CaptureMouseButtonsProperty = DependencyProperty.Register(
+            nameof(CaptureMouseButtons), typeof(bool), typeof(ShortcutBox), new PropertyMetadata(true));
+
+        public bool CaptureMouseButtons
+        {
+            get { return (bool)GetValue(CaptureMouseButtonsProperty); }
+            set { SetValue(CaptureMouseButtonsProperty, value); }
+        }
+
         // True while this box is the one currently capturing keys.
         public static readonly DependencyProperty IsActiveProperty = DependencyProperty.Register(
             nameof(IsActive), typeof(bool), typeof(ShortcutBox),
@@ -134,8 +153,11 @@ namespace DCSB.Controls
             {
                 // Capture mouse buttons only inside this box: clicking it binds the button,
                 // while clicks elsewhere are ignored (so nearby clicks aren't captured).
-                _activeBox = box;
-                box.PublishBindingRegion();
+                if (box.CaptureMouseButtons)
+                {
+                    _activeBox = box;
+                    box.PublishBindingRegion();
+                }
             }
             else
             {

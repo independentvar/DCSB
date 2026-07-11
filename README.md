@@ -6,7 +6,7 @@ A free, open source soundboard and death counter for Windows, made for gamers an
 
 ## Highlights
 
-- **Global hotkeys** — trigger sounds and counters with keyboard shortcuts or mouse buttons from inside any game; the app doesn't need focus.
+- **Global hotkeys and MIDI pads** — trigger sounds with a MIDI controller, or use keyboard shortcuts and mouse buttons from inside any game; the app doesn't need focus.
 - **Plays into Discord and games** — mixes your sounds with your microphone into a second output device (a virtual cable such as VB-CABLE), so people in voice chat hear both your voice and the soundboard. A built-in **setup wizard** walks you through the virtual cable, audio routing, and verifying that Discord will hear you.
 - **Noise suppression** — clean up your microphone with a fast mode (RNNoise, ~10 ms latency) or a high-quality mode (DeepFilterNet3, noticeably better on keyboard clatter and background voices). Low-latency mic passthrough throughout.
 - **Microphone controls** — mic volume with boost above 100%, live level meter, and a mute/unmute hotkey.
