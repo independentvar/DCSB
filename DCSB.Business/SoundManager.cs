@@ -176,6 +176,43 @@ namespace DCSB.Business
         public event EventHandler<float> PrimaryLevelChanged;
         public event EventHandler<float> SecondaryLevelChanged;
 
+        // User-facing failures retained even when the failed selection is replaced
+        // with Disabled. The ViewModel is created after the startup devices are
+        // opened, so an event alone would lose precisely the failures users most
+        // need help diagnosing.
+        private readonly object _runtimeWarningsLock = new object();
+        private readonly Dictionary<string, string> _runtimeWarnings = new Dictionary<string, string>();
+        public event EventHandler RuntimeWarningsChanged;
+
+        public IReadOnlyCollection<string> RuntimeWarnings
+        {
+            get
+            {
+                lock (_runtimeWarningsLock)
+                {
+                    return new List<string>(_runtimeWarnings.Values);
+                }
+            }
+        }
+
+        private void SetRuntimeWarning(string key, string message)
+        {
+            bool changed;
+            lock (_runtimeWarningsLock)
+            {
+                changed = !_runtimeWarnings.TryGetValue(key, out string existing) || existing != message;
+                _runtimeWarnings[key] = message;
+            }
+            if (changed && RuntimeWarningsChanged != null) RuntimeWarningsChanged(this, EventArgs.Empty);
+        }
+
+        private void ClearRuntimeWarning(string key)
+        {
+            bool changed;
+            lock (_runtimeWarningsLock) changed = _runtimeWarnings.Remove(key);
+            if (changed && RuntimeWarningsChanged != null) RuntimeWarningsChanged(this, EventArgs.Empty);
+        }
+
         // peak level (0..1) of audio captured from the virtual cable's recording endpoint
         // (e.g. CABLE Output) while the wizard's verify step runs; lets the wizard prove
         // that a sound sent to the cable actually comes back out of it.
@@ -428,6 +465,10 @@ namespace DCSB.Business
 
         private string InstantiateDevice(string deviceName, bool primary, ref AudioPlaybackEngine soundPlayer)
         {
+            string warningKey = primary ? "primary-output" : "secondary-output";
+            string outputName = primary ? "First output" : "Second output";
+            ClearRuntimeWarning(warningKey);
+
             // fall back to the default output device only when no device was ever chosen
             // (first run); an explicitly chosen device that is currently missing must not
             // be silently replaced with the speakers
@@ -440,6 +481,10 @@ namespace DCSB.Business
             if (resolvedName == null)
             {
                 soundPlayer = null;
+                if (!string.IsNullOrEmpty(deviceName) && deviceName != AudioPlaybackEngine.DisabledDeviceName)
+                {
+                    SetRuntimeWarning(warningKey, $"{outputName} '{deviceName}' is unavailable and was disabled.");
+                }
                 return AudioPlaybackEngine.DisabledDeviceName;
             }
 
@@ -453,6 +498,7 @@ namespace DCSB.Business
                 // exclusively) - disable the output instead of crashing on startup
                 Debug.WriteLine(e);
                 soundPlayer = null;
+                SetRuntimeWarning(warningKey, $"{outputName} '{deviceName}' could not be opened and was disabled.");
                 return AudioPlaybackEngine.DisabledDeviceName;
             }
             return resolvedName;
@@ -511,10 +557,15 @@ namespace DCSB.Business
         public string ChangeMicrophoneInput(string deviceName)
         {
             DisableMicrophone();
+            ClearRuntimeWarning("microphone");
 
             string resolvedName = MicrophoneInput.ResolveDeviceName(deviceName);
             if (resolvedName == null)
             {
+                if (!string.IsNullOrEmpty(deviceName) && deviceName != MicrophoneInput.DisabledDeviceName)
+                {
+                    SetRuntimeWarning("microphone", $"Microphone '{deviceName}' is unavailable and was disabled.");
+                }
                 return MicrophoneInput.DisabledDeviceName;
             }
 
@@ -526,11 +577,13 @@ namespace DCSB.Business
             {
                 Debug.WriteLine(e);
                 _microphoneInput = null;
+                SetRuntimeWarning("microphone", $"Microphone '{deviceName}' could not be opened and was disabled.");
                 return MicrophoneInput.DisabledDeviceName;
             }
 
             _microphoneInput.CaptureFailed += OnMicrophoneCaptureFailed;
             _microphoneInput.LevelChanged += OnMicrophoneLevelChanged;
+            _microphoneDeviceName = resolvedName;
             AttachMicrophone();
 
             // AttachMicrophone disables the microphone when mixing it in fails
@@ -553,6 +606,7 @@ namespace DCSB.Business
         // this; a suppressor built in the background only attaches if its version is
         // still current, so rapid toggles or device switches can't attach stale chains.
         private int _attachVersion;
+        private string _microphoneDeviceName;
 
         // Capture keeps running even while the secondary output is disabled (the
         // level meter still shows input); the mic is attached once both ends exist.
@@ -570,6 +624,7 @@ namespace DCSB.Business
             NoiseSuppressionMode mode = _noiseSuppression;
             if (mode == NoiseSuppressionMode.Disabled)
             {
+                ClearRuntimeWarning("noise-suppression");
                 CompleteAttachMicrophone(version, null);
                 return;
             }
@@ -587,6 +642,7 @@ namespace DCSB.Business
                     // a broken install (missing suppressor dll) degrades to the raw
                     // voice instead of taking the microphone down with it
                     Debug.WriteLine(e);
+                    SetRuntimeWarning("noise-suppression", $"{mode} noise suppression could not be started; your microphone is still being sent without suppression.");
                 }
 
                 if (_syncContext != null)
@@ -615,12 +671,15 @@ namespace DCSB.Business
                 // voice resumes live instead of replaying a backlog
                 _microphoneInput.Flush();
                 _secondarySoundPlayer.SetMicrophoneInput(_microphoneInput.SampleProvider, EffectiveMicrophoneVolume, suppressor);
+                if (suppressor != null) ClearRuntimeWarning("noise-suppression");
             }
             catch (Exception e)
             {
                 // e.g. a microphone with more than two channels cannot be converted
                 Debug.WriteLine(e);
+                string failedName = _microphoneDeviceName;
                 DisableMicrophone();
+                SetRuntimeWarning("microphone", $"Microphone '{failedName}' could not be routed to the second output and was disabled.");
                 if (MicrophoneFailed != null) MicrophoneFailed(this, e);
             }
         }
@@ -628,7 +687,9 @@ namespace DCSB.Business
         private void OnMicrophoneCaptureFailed(object sender, Exception e)
         {
             Debug.WriteLine(e);
+            string failedName = _microphoneDeviceName;
             DisableMicrophone();
+            SetRuntimeWarning("microphone", $"Microphone '{failedName}' stopped working and was disabled.");
             if (MicrophoneFailed != null) MicrophoneFailed(this, e);
         }
 

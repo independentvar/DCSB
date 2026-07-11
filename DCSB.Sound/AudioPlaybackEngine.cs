@@ -486,6 +486,30 @@ namespace DCSB.SoundPlayer
             return null;
         }
 
+        // Friendly names are not sufficient here: "Default Output Device" may
+        // resolve to the same endpoint selected explicitly for the other output.
+        public static bool AreSameDevice(string firstDeviceName, string secondDeviceName)
+        {
+            if (string.IsNullOrEmpty(firstDeviceName) || string.IsNullOrEmpty(secondDeviceName)
+                || firstDeviceName == DisabledDeviceName || secondDeviceName == DisabledDeviceName)
+            {
+                return false;
+            }
+
+            MMDevice first = FindDevice(firstDeviceName);
+            MMDevice second = FindDevice(secondDeviceName);
+            try
+            {
+                return first != null && second != null
+                    && string.Equals(first.ID, second.ID, StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                if (first != null) first.Dispose();
+                if (second != null) second.Dispose();
+            }
+        }
+
         private static MMDevice FindDevice(string deviceName)
         {
             using (MMDeviceEnumerator enumerator = new MMDeviceEnumerator())

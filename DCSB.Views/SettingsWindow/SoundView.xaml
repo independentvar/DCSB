@@ -36,6 +36,34 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
+            <ItemsControl Margin="5,5,5,0"
+                          ItemsSource="{Binding Warnings}"
+                          AutomationProperties.Name="Audio configuration warnings">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,5"
+                                Padding="9,7"
+                                Background="#FFFFF4CE"
+                                BorderBrush="#FFE5A000"
+                                BorderThickness="1"
+                                CornerRadius="3">
+                            <DockPanel>
+                                <TextBlock Margin="0,0,8,0"
+                                           VerticalAlignment="Top"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Foreground="#FF8A5A00"
+                                           Text="!" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="#FF5C4500"
+                                           Text="{Binding}"
+                                           TextWrapping="Wrap" />
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <GroupBox Header="Overlap">
                 <CheckBox Margin="5" IsChecked="{Binding Overlap}">Overlap sounds</CheckBox>
             </GroupBox>

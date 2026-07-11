@@ -5,6 +5,7 @@
         xmlns:Views="clr-namespace:DCSB.Views.SettingsWindow;assembly=DCSB.Views"
         Title="Settings"
         Width="450"
+        MaxHeight="{x:Static SystemParameters.PrimaryScreenHeight}"
         SizeToContent="Height"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
