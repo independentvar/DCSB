@@ -54,6 +54,36 @@ namespace DCSB.Tests
         }
 
         [TestMethod]
+        public void SoundPressAgainBehavior_DefaultsToPauseAndRoundTrips()
+        {
+            Sound defaultSound = new Sound();
+            Assert.AreEqual(PressAgainBehavior.Pause, defaultSound.PressAgainBehavior);
+
+            ConfigurationModel model = new ConfigurationModel();
+            Preset preset = new Preset { Name = "Sounds" };
+            preset.SoundCollection.Add(new Sound { Name = "Toggle", PressAgainBehavior = PressAgainBehavior.Stop });
+            model.PresetCollection.Add(preset);
+
+            ConfigurationModel loaded = RoundTrip(model);
+
+            Assert.AreEqual(PressAgainBehavior.Stop, loaded.PresetCollection[0].SoundCollection[0].PressAgainBehavior);
+        }
+
+        [TestMethod]
+        public void Deserialize_LegacySoundWithoutPressAgainBehavior_DefaultsToPause()
+        {
+            string oldConfig = "<?xml version=\"1.0\"?><ConfigurationModel><PresetCollection><Preset><SoundCollection><Sound><Name>Legacy</Name></Sound></SoundCollection></Preset></PresetCollection></ConfigurationModel>";
+            XmlSerializer serializer = new XmlSerializer(typeof(ConfigurationModel));
+            ConfigurationModel loaded;
+            using (StringReader reader = new StringReader(oldConfig))
+            {
+                loaded = (ConfigurationModel)serializer.Deserialize(reader);
+            }
+
+            Assert.AreEqual(PressAgainBehavior.Pause, loaded.PresetCollection[0].SoundCollection[0].PressAgainBehavior);
+        }
+
+        [TestMethod]
         public void RoundTrip_PreservesAutoAssignSettings()
         {
             ConfigurationModel model = new ConfigurationModel

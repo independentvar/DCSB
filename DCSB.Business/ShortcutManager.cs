@@ -1,4 +1,4 @@
-﻿using DCSB.Models;
+using DCSB.Models;
 using DCSB.Utils;
 using System;
 using System.Collections.Generic;
@@ -91,7 +91,7 @@ namespace DCSB.Business
                 if (sound != null)
                 {
                     _configurationModel.SelectedPreset.SelectedSound = sound;
-                    _soundManager.Play(sound);
+                    _soundManager.Toggle(sound);
                 }
             }
 

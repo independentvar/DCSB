@@ -1,8 +1,9 @@
-﻿<UserControl x:Class="DCSB.Views.SoundView"
+<UserControl x:Class="DCSB.Views.SoundView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:Converters="clr-namespace:DCSB.Converters;assembly=DCSB.Converters"
              xmlns:Controls="clr-namespace:DCSB.Controls;assembly=DCSB.Controls"
+             xmlns:Models="clr-namespace:DCSB.Models;assembly=DCSB.Models"
              xmlns:Interactivity="clr-namespace:DCSB.Interactivity;assembly=DCSB.Interactivity"
              Width="500">
 
@@ -56,8 +57,18 @@
                 IsMoveToPointEnabled="True" ToolTip="Change applies next time you play this sound"
                 Value="{Binding ApplicationStateModel.ModifiedSound.Volume}"/>
 
-        <Label Grid.Row="4" Grid.Column="0">Loop:</Label>
-        <CheckBox Grid.Row="4" Grid.Column="1" Margin="5" ToolTip="Change applies next time you play this sound"
-                  IsChecked="{Binding ApplicationStateModel.ModifiedSound.Loop}" />
+        <Label Grid.Row="4" Grid.Column="0">Playback:</Label>
+        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <CheckBox Margin="5" ToolTip="Change applies next time you play this sound"
+                      IsChecked="{Binding ApplicationStateModel.ModifiedSound.Loop}">Loop</CheckBox>
+            <Label Margin="12,0,0,0">Press again:</Label>
+            <ComboBox Margin="5" MinWidth="110"
+                      SelectedValue="{Binding ApplicationStateModel.ModifiedSound.PressAgainBehavior}"
+                      SelectedValuePath="Tag">
+                <ComboBoxItem Tag="{x:Static Models:PressAgainBehavior.Restart}">Restart / layer</ComboBoxItem>
+                <ComboBoxItem Tag="{x:Static Models:PressAgainBehavior.Stop}">Stop</ComboBoxItem>
+                <ComboBoxItem Tag="{x:Static Models:PressAgainBehavior.Pause}">Pause / resume</ComboBoxItem>
+            </ComboBox>
+        </StackPanel>
     </Grid>
 </UserControl>
