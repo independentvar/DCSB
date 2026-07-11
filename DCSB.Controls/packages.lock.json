@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "dcsb.input": {
+        "type": "Project",
+        "dependencies": {
+          "DCSB.Utils": "[1.0.0, )"
+        }
+      },
+      "dcsb.utils": {
+        "type": "Project"
+      }
+    }
+  }
+}

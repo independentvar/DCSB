@@ -4,6 +4,9 @@
          layout (bin\<Config>\ with no TFM subfolder) so the NSIS installer and the
          CI workflow can reference bin\Release\ paths unchanged. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Commit NuGet lock files so CI and release builds restore the reviewed
+         dependency graph instead of silently selecting newer transitives. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- The app is Windows-only by design (WPF/WinForms/Win32). CA1416 flags every
          Windows-only API call for cross-platform portability we will never need, so
          suppress it repo-wide to keep genuine warnings visible. -->

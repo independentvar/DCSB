@@ -16,16 +16,22 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025
+    timeout-minutes: 60
+    concurrency:
+      group: deepfilternet-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Build deepfilter.dll from pinned tag
         shell: pwsh
         run: ./ThirdParty/deepfilternet/build-deepfilternet.ps1
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deepfilternet
           path: |
@@ -34,3 +40,4 @@ jobs:
             ThirdParty/deepfilternet/LICENSE-MIT
             ThirdParty/deepfilternet/LICENSE-APACHE
           if-no-files-found: error
+          retention-days: 14
