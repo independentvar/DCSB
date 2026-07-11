@@ -86,6 +86,11 @@ namespace DCSB.Models
         // because the audio decoders live in a higher layer than this model.
         public static Func<string, TimeSpan?> DurationProvider;
 
+        // Verifies that a file can be opened by the application's decoder chain.
+        // Wired up by the app layer because the model does not reference audio.
+        // Returns null for a valid file or a user-facing explanation otherwise.
+        public static Func<string, string> FileValidator;
+
         // Warms the loudness cache used by volume normalization. Wired up at startup
         // like DurationProvider and invoked from the same background pass, so every
         // sound's files are measured before they are first played.
@@ -128,17 +133,28 @@ namespace DCSB.Models
         private void ValidateFiles()
         {
             Error = null;
-            List<string> missing_files = new List<string>();
+            List<string> errors = new List<string>();
             foreach (string file in Files)
             {
                 if (!File.Exists(file))
                 {
-                    missing_files.Add(file);
+                    errors.Add($"'{Path.GetFileName(file)}': File is missing — was it moved or deleted?");
+                    continue;
+                }
+
+                Func<string, string> validator = FileValidator;
+                if (validator != null)
+                {
+                    string validationError = validator(file);
+                    if (!string.IsNullOrEmpty(validationError))
+                    {
+                        errors.Add($"'{Path.GetFileName(file)}': {validationError}");
+                    }
                 }
             }
-            if (missing_files.Count != 0)
+            if (errors.Count != 0)
             {
-                Error = string.Format("Following files do not exist:\n{0}", string.Join("\n", missing_files));
+                Error = string.Join("\n", errors);
             }
         }
 

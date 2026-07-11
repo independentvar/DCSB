@@ -54,6 +54,7 @@ namespace DCSB.ViewModels
         {
             // must be wired before Load() so sounds get their duration as they deserialize
             Sound.DurationProvider = SoundManager.GetDuration;
+            Sound.FileValidator = SoundManager.ValidateSoundFile;
             Sound.LoudnessPrefetcher = SoundManager.PrefetchLoudness;
 
             _applicationStateModel = new ApplicationStateModel();
