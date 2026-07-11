@@ -55,6 +55,29 @@ namespace DCSB.Models
             }
         }
 
+        private MidiBinding _midiBinding;
+        public MidiBinding MidiBinding
+        {
+            get { return _midiBinding; }
+            set
+            {
+                _midiBinding = value;
+                OnPropertyChanged(nameof(MidiBinding));
+            }
+        }
+
+        private bool _isMidiLearning;
+        [XmlIgnore]
+        public bool IsMidiLearning
+        {
+            get { return _isMidiLearning; }
+            set
+            {
+                _isMidiLearning = value;
+                OnPropertyChanged(nameof(IsMidiLearning));
+            }
+        }
+
         private int _volume;
         public int Volume
         {
@@ -146,6 +169,7 @@ namespace DCSB.Models
             Sound clonedSound = new Sound() { Name = Name, Volume = Volume, Loop = Loop, PressAgainBehavior = PressAgainBehavior };
             foreach (string file in Files) clonedSound.Files.Add(file);
             foreach (VKey key in Keys) clonedSound.Keys.Add(key);
+            clonedSound.MidiBinding = MidiBinding?.Clone();
             return clonedSound;
         }
 

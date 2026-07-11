@@ -102,7 +102,8 @@
       "dcsb.input": {
         "type": "Project",
         "dependencies": {
-          "DCSB.Utils": "[1.0.0, )"
+          "DCSB.Utils": "[1.0.0, )",
+          "NAudio": "[2.3.0, )"
         }
       },
       "dcsb.models": {

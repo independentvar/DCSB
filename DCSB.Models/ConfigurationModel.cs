@@ -96,6 +96,19 @@ namespace DCSB.Models
             }
         }
 
+        // null/empty means disabled. Keeping this opt-in ensures startup never opens
+        // a MIDI handle for existing users.
+        private string _midiInputDevice;
+        public string MidiInputDevice
+        {
+            get { return _midiInputDevice; }
+            set
+            {
+                _midiInputDevice = value;
+                OnPropertyChanged(nameof(MidiInputDevice));
+            }
+        }
+
         // silences the microphone leg without dropping the capture device, so
         // unmuting is instant; persisted so a muted mic stays muted across restarts
         private bool _microphoneMuted;

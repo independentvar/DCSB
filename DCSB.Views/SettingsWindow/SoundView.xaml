@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="DCSB.Views.SettingsWindow.SoundView"
+<UserControl x:Class="DCSB.Views.SettingsWindow.SoundView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -47,7 +47,7 @@
                     Normalize volume across sounds
                 </CheckBox>
             </GroupBox>
-            
+
             <GroupBox Header="Output Devices">
                 <Grid>
                     <Grid.ColumnDefinitions>

@@ -102,5 +102,16 @@ namespace DCSB.Models
                 OnPropertyChanged("ModifiedSound");
             }
         }
+
+        private Sound _modifiedMidiSound;
+        public Sound ModifiedMidiSound
+        {
+            get { return _modifiedMidiSound; }
+            set
+            {
+                _modifiedMidiSound = value;
+                OnPropertyChanged(nameof(ModifiedMidiSound));
+            }
+        }
     }
 }

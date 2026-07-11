@@ -29,6 +29,7 @@ namespace DCSB.ViewModels
         private SoundManager _soundManager;
         private UpdateManager _updateManager;
         private KeyboardInput _keyboardInput;
+        private MidiInput _midiInput;
 
         private PresetConfigurationViewModel _presetConfigurationViewModel;
         private WizardViewModel _wizardViewModel;
@@ -68,6 +69,8 @@ namespace DCSB.ViewModels
             _soundManager = new SoundManager(_configurationModel);
             _shortcutManager = new ShortcutManager(_applicationStateModel, _configurationModel, _soundManager);
             _updateManager = new UpdateManager();
+            _midiInput = new MidiInput(_configurationModel.MidiInputDevice);
+            _midiInput.MessageReceived += OnMidiMessageReceived;
 
             _presetConfigurationViewModel = new PresetConfigurationViewModel(_applicationStateModel, _configurationModel);
             _wizardViewModel = new WizardViewModel(this, _configurationModel, _soundManager);
@@ -110,6 +113,19 @@ namespace DCSB.ViewModels
             _seekbarWatchdog.Tick += (sender, e) => RefreshSeekbarRendering();
 
             Task.Run(() => _updateManager.AutoUpdateCheck(Version));
+        }
+
+        private void OnMidiMessageReceived(object sender, MidiInputEventArgs e)
+        {
+            Dispatcher dispatcher = Application.Current?.Dispatcher;
+            Action route = () => _shortcutManager.MidiMessage(
+                e.Channel,
+                e.Kind == MidiInputMessageKind.Note ? MidiMessageKind.Note : MidiMessageKind.ControlChange,
+                e.Number);
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(route);
+            else
+                route();
         }
 
         public double SoundPositionSeconds
@@ -440,6 +456,32 @@ namespace DCSB.ViewModels
         public ICollection<string> AvailableInputs
         {
             get { return _soundManager.EnumerateInputDevices(); }
+        }
+
+        public IReadOnlyList<string> AvailableMidiInputs
+        {
+            get { return MidiInput.EnumerateDevices(); }
+        }
+
+        public string MidiInputDevice
+        {
+            get { return string.IsNullOrWhiteSpace(_configurationModel.MidiInputDevice) ? MidiInput.DisabledDeviceName : _configurationModel.MidiInputDevice; }
+            set
+            {
+                string selected = value == MidiInput.DisabledDeviceName ? null : value;
+                if (string.Equals(_configurationModel.MidiInputDevice, selected, StringComparison.Ordinal))
+                    return;
+
+                _configurationModel.MidiInputDevice = selected;
+                _midiInput.SelectDevice(selected);
+                OnPropertyChanged(nameof(MidiInputDevice));
+                OnPropertyChanged(nameof(IsMidiInputEnabled));
+            }
+        }
+
+        public bool IsMidiInputEnabled
+        {
+            get { return !string.IsNullOrWhiteSpace(_configurationModel.MidiInputDevice); }
         }
 
         public string MicrophoneInput
@@ -1169,6 +1211,32 @@ namespace DCSB.ViewModels
         {
             get { return new RelayCommand<IBindable>(BindKeys); }
         }
+
+        public ICommand LearnMidiCommand
+        {
+            get { return new RelayCommand<Sound>(LearnMidi); }
+        }
+        private void LearnMidi(Sound sound)
+        {
+            if (sound == null) return;
+            Sound previous = _applicationStateModel.ModifiedMidiSound;
+            if (previous != null) previous.IsMidiLearning = false;
+            bool startLearning = previous != sound;
+            _applicationStateModel.ModifiedMidiSound = startLearning ? sound : null;
+            sound.IsMidiLearning = startLearning;
+        }
+
+        public ICommand ClearMidiBindingCommand
+        {
+            get { return new RelayCommand<Sound>(sound =>
+            {
+                if (sound == null) return;
+                sound.MidiBinding = null;
+                sound.IsMidiLearning = false;
+                if (_applicationStateModel.ModifiedMidiSound == sound)
+                    _applicationStateModel.ModifiedMidiSound = null;
+            }); }
+        }
         // Toggles inline key capture for a field: click to start listening, click the
         // same field again to cancel. The global hook writes the keys on the next
         // key-up (see ShortcutManager.KeyUp) and clears ModifiedBindable.
@@ -1221,6 +1289,11 @@ namespace DCSB.ViewModels
             if (_keyboardInput != null)
             {
                 _keyboardInput.Dispose();
+            }
+            if (_midiInput != null)
+            {
+                _midiInput.MessageReceived -= OnMidiMessageReceived;
+                _midiInput.Dispose();
             }
             if (_soundManager != null)
             {

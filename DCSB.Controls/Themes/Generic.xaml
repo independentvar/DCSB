@@ -79,7 +79,7 @@
                                        Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
                             <!-- Listening state -->
                             <TextBlock x:Name="listeningText"
-                                       Text="Press a key or click here — Esc to cancel"
+                                       Text="{TemplateBinding ListeningText}"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
                                        FontStyle="Italic"
