@@ -48,6 +48,9 @@ namespace DCSB.ViewModels
         private bool _seekbarRenderingAttached;
         private IntPtr _windowHandle;
         private DispatcherTimer _seekbarWatchdog;
+        private DispatcherTimer _administratorWatchdog;
+        private DateTime? _elevatedFullscreenDetectedAt;
+        private bool _administratorPromptShownAutomatically;
         private readonly Stopwatch _positionInterpolation = new Stopwatch();
 
         public ViewModel()
@@ -241,7 +244,44 @@ namespace DCSB.ViewModels
                 _keyboardInput.KeyUp += _shortcutManager.KeyUp;
                 _keyboardInput.KeyDown += _shortcutManager.KeyDown;
                 _keyboardInput.KeyPress += _shortcutManager.KeyPress;
+
+                if (NotAdministrator == Visibility.Visible && _administratorWatchdog == null)
+                {
+                    _administratorWatchdog = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(500)
+                    };
+                    _administratorWatchdog.Tick += OnAdministratorWatchdogTick;
+                    _administratorWatchdog.Start();
+                }
             }
+        }
+
+        private void OnAdministratorWatchdogTick(object sender, EventArgs e)
+        {
+            if (_administratorPromptShownAutomatically)
+                return;
+
+            if (!FullscreenDetector.IsElevatedFullscreenAppForeground())
+            {
+                _elevatedFullscreenDetectedAt = null;
+                return;
+            }
+
+            if (!_elevatedFullscreenDetectedAt.HasValue)
+            {
+                _elevatedFullscreenDetectedAt = DateTime.UtcNow;
+                return;
+            }
+
+            // Avoid interrupting the user for transient fullscreen windows such as
+            // launchers and splash screens. The prompt is shown only once per run.
+            if (DateTime.UtcNow - _elevatedFullscreenDetectedAt.Value < TimeSpan.FromSeconds(4))
+                return;
+
+            _administratorPromptShownAutomatically = true;
+            _administratorWatchdog.Stop();
+            OpenNotAdministrator();
         }
 
         public ApplicationStateModel ApplicationStateModel
@@ -470,6 +510,20 @@ namespace DCSB.ViewModels
             }
         }
 
+        private Visibility _soundOverlayVisibility = Visibility.Collapsed;
+        public Visibility SoundOverlayVisibility
+        {
+            get { return _soundOverlayVisibility; }
+            set { SetProperty(ref _soundOverlayVisibility, value); }
+        }
+
+        private Visibility _administratorOverlayWarningVisibility = Visibility.Collapsed;
+        public Visibility AdministratorOverlayWarningVisibility
+        {
+            get { return _administratorOverlayWarningVisibility; }
+            set { SetProperty(ref _administratorOverlayWarningVisibility, value); }
+        }
+
         public ICommand CheckForUpdatesCommand
         {
             get { return new RelayCommand(CheckForUpdates); }
@@ -623,19 +677,42 @@ namespace DCSB.ViewModels
         }
         private void OpenNotAdministrator()
         {
-            var result = MessageBox.Show("DCSB is not running as an administrator.\n" +
-                "This is fine as long as keybinds work when other app is focused.\n" +
-                "If you focus other app and keybins stop working, you'll need to run DCSB as admin.\n\n" +
-                "Restart DCSB and run it as admin now?", 
-                "Not Admin",
-                MessageBoxButton.YesNo);
+            var result = MessageBox.Show(
+                "DCSB is currently running without administrator access.\n\n" +
+                "This is recommended and works with most games. However, Windows prevents " +
+                "a non-administrator app from receiving global keyboard and mouse input while " +
+                "a game or launcher running as administrator is focused. In that situation, " +
+                "DCSB hotkeys may stop working until you switch away from the game.\n\n" +
+                "You only need to run DCSB as administrator when using hotkeys with an elevated game.\n\n" +
+                "Restart DCSB as administrator now?",
+                "Administrator access may be required",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
 
             if (result == MessageBoxResult.Yes)
             {
                 var exeName = Process.GetCurrentProcess().MainModule.FileName;
-                var startInfo = new ProcessStartInfo(exeName) { Verb = "runas" };
-                Process.Start(startInfo);
-                Application.Current.Shutdown();
+                var startInfo = new ProcessStartInfo(exeName)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(exeName),
+                    Verb = "runas"
+                };
+                // The replacement starts before this process has fully exited. Tell it
+                // to wait for the single-instance mutex instead of treating the old
+                // process as an unrelated second instance and immediately exiting.
+                startInfo.ArgumentList.Add("--restart-elevated");
+                try
+                {
+                    Process.Start(startInfo);
+                    Application.Current.Shutdown();
+                }
+                catch (System.ComponentModel.Win32Exception e)
+                {
+                    // UAC was declined or elevation is unavailable. Keep this instance
+                    // running so the user does not lose the soundboard unexpectedly.
+                    Debug.WriteLine(e);
+                }
             }
         }
 
@@ -1135,6 +1212,11 @@ namespace DCSB.ViewModels
             if (_seekbarWatchdog != null)
             {
                 _seekbarWatchdog.Stop();
+            }
+            if (_administratorWatchdog != null)
+            {
+                _administratorWatchdog.Stop();
+                _administratorWatchdog.Tick -= OnAdministratorWatchdogTick;
             }
             if (_keyboardInput != null)
             {

@@ -25,6 +25,15 @@ namespace DCSB.Utils
         }
 
         private const uint MonitorDefaultToNearest = 2;
+        private const uint ProcessQueryLimitedInformation = 0x1000;
+        private const uint TokenQuery = 0x0008;
+        private const int TokenElevation = 20;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct TOKEN_ELEVATION
+        {
+            public int TokenIsElevated;
+        }
 
         private static readonly uint _currentProcessId = (uint)Process.GetCurrentProcess().Id;
 
@@ -48,6 +57,34 @@ namespace DCSB.Utils
 
         [DllImport("user32.dll")]
         private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO info);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, uint processId);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool GetTokenInformation(IntPtr tokenHandle, int tokenInformationClass,
+            out TOKEN_ELEVATION tokenInformation, int tokenInformationLength, out int returnLength);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr handle);
+
+        // True when another process owns the foreground, fills its monitor, and is
+        // elevated. This does not depend on DCSB receiving input from that process.
+        public static bool IsElevatedFullscreenAppForeground()
+        {
+            if (!TryGetForeignForegroundWindow(out IntPtr foreground))
+                return false;
+
+            IntPtr monitor = MonitorFromWindow(foreground, MonitorDefaultToNearest);
+            if (!SpansMonitor(foreground, monitor, out _))
+                return false;
+
+            GetWindowThreadProcessId(foreground, out uint processId);
+            return IsProcessElevated(processId);
+        }
 
         // true when another process' foreground window spans the entire monitor that
         // hwnd is on - i.e. a fullscreen or borderless-fullscreen application (a game)
@@ -122,6 +159,34 @@ namespace DCSB.Utils
                 && rect.Top <= info.Monitor.Top
                 && rect.Right >= info.Monitor.Right
                 && rect.Bottom >= info.Monitor.Bottom;
+        }
+
+        private static bool IsProcessElevated(uint processId)
+        {
+            IntPtr process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+            if (process == IntPtr.Zero)
+                return false;
+
+            try
+            {
+                if (!OpenProcessToken(process, TokenQuery, out IntPtr token))
+                    return false;
+
+                try
+                {
+                    int size = Marshal.SizeOf(typeof(TOKEN_ELEVATION));
+                    return GetTokenInformation(token, TokenElevation, out TOKEN_ELEVATION elevation, size, out _)
+                        && elevation.TokenIsElevated != 0;
+                }
+                finally
+                {
+                    CloseHandle(token);
+                }
+            }
+            finally
+            {
+                CloseHandle(process);
+            }
         }
     }
 }

@@ -26,10 +26,24 @@ namespace DCSB
         private void Update()
         {
             DisplayOption enable = _viewModel.ConfigurationModel.Enable;
-            bool enabled = _viewModel.ConfigurationModel.OverlayEnabled
+            bool soundOverlayEnabled = _viewModel.ConfigurationModel.OverlayEnabled
                 && (enable == DisplayOption.Sounds || enable == DisplayOption.Both);
+            bool soundOverlayVisible = soundOverlayEnabled
+                && _viewModel.ConfigurationModel.SelectedPreset.SoundCollection.Count > 0;
+            bool fullscreen = FullscreenDetector.TryGetFullscreenAppBounds(
+                out int left, out int top, out int width, out int height);
+            bool administratorWarning = fullscreen
+                && _viewModel.NotAdministrator == System.Windows.Visibility.Visible
+                && FullscreenDetector.IsElevatedFullscreenAppForeground();
 
-            if (enabled && FullscreenDetector.TryGetFullscreenAppBounds(out int left, out int top, out int width, out int height))
+            _viewModel.SoundOverlayVisibility = soundOverlayVisible
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
+            _viewModel.AdministratorOverlayWarningVisibility = administratorWarning
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
+
+            if (fullscreen && (soundOverlayVisible || administratorWarning))
             {
                 if (_window == null)
                 {
