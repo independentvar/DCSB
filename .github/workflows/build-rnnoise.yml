@@ -17,6 +17,10 @@ jobs:
   build:
     runs-on: windows-2025
     timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     concurrency:
       group: rnnoise-${{ github.ref }}
       cancel-in-progress: true
@@ -28,6 +32,11 @@ jobs:
       - name: Build rnnoise.dll from pinned tag
         shell: pwsh
         run: ./ThirdParty/rnnoise/build-rnnoise.ps1
+
+      - name: Attest dll provenance
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: ThirdParty/rnnoise/rnnoise.dll
 
       - name: Upload dll artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
