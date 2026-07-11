@@ -1,46 +1,34 @@
 name: Validate AssemblyVersion bump
 
-permissions:
-  contents: read
-
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: version-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   require-version-bump:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Fetch base
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --no-tags
-
-      - name: Ensure AssemblyVersionInfo.cs bumped when shipped code changes
-        run: |
-          set -euo pipefail
-          CHANGED=$(git diff --name-only FETCH_HEAD...HEAD || true)
-          echo "Changed files:\n$CHANGED"
-
-          # If AssemblyVersionInfo.cs was changed, pass
-          if echo "$CHANGED" | grep -q '^AssemblyVersionInfo.cs$'; then
-            echo "AssemblyVersionInfo.cs changed — OK"
-            exit 0
-          fi
-
-          # Ignore changes that don't affect the shipped app: tests, docs, CI
-          # config, installer tooling, and the repo-root .gitignore. The installer
-          # scripts build the package but don't change the app binaries themselves.
-          FILTERED=$(echo "$CHANGED" | grep -vE '^(DCSB.Tests/|DCSB.UITests/|\.github/|Installer scripts/|docs/|README.md|\.gitignore$)' || true)
-
-          if [ -z "$FILTERED" ]; then
-            echo "Only test/docs/CI/installer files changed — no version bump required"
-            exit 0
-          fi
-
-          echo "ERROR: This PR changes shipped code but AssemblyVersionInfo.cs was not updated."
-          echo "Please increment AssemblyVersion and AssemblyFileVersion in AssemblyVersionInfo.cs in this PR."
-          exit 1
+      - name: Validate version policy
+        shell: pwsh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          ./.github/scripts/version-policy.ps1
+          -BaseRef $env:BASE_SHA
+          -HeadRef $env:HEAD_SHA
+          -DiffMode MergeBase

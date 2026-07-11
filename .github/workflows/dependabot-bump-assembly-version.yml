@@ -1,76 +1,89 @@
 name: Dependabot — bump AssemblyVersion
 
+# Dependabot dependency updates change the shipped binaries but never touch
+# AssemblyVersionInfo.cs, so they fail the version policy. This workflow supplies
+# the required patch bump on the PR branch. The push must use a fine-grained PAT
+# (Dependabot secret VERSION_BUMP_TOKEN, Contents: write) rather than GITHUB_TOKEN:
+# commits pushed with GITHUB_TOKEN do not re-trigger the required `build` check,
+# which would leave the PR unmergeable.
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: dependabot-bump-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   bump-assembly-version:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout PR branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.VERSION_BUMP_TOKEN }}
 
-      - name: Get changed files
-        id: changes
-        run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
-          git fetch origin $BASE --no-tags
-          CHANGED=$(git diff --name-only "$BASE" "$HEAD" || true)
-          echo "$CHANGED" > changed.txt
-          echo "Changed files:\n$CHANGED"
-
-      - name: Skip if only tests/docs/CI changed or AssemblyVersionInfo already updated
-        run: |
-          CHANGED=$(cat changed.txt || true)
-          # Ignore tests, UI tests, .github, docs and README
-          FILTERED=$(echo "$CHANGED" | grep -vE '^(DCSB.Tests/|DCSB.UITests/|\\.github/|docs/|README.md)' || true)
-
-          if [ -z "$FILTERED" ]; then
-            echo "No shipped-code changes detected. Exiting."
-            exit 0
-          fi
-
-          if echo "$CHANGED" | grep -q '^AssemblyVersionInfo.cs$'; then
-            echo "AssemblyVersionInfo.cs already changed in this PR. Exiting."
-            exit 0
-          fi
-
-      - name: Bump third component (patch) and set fourth to 0
+      - name: Bump AssemblyVersion when shipped code changed
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          FILE=AssemblyVersionInfo.cs
-          if [ ! -f "$FILE" ]; then echo "File not found: $FILE"; exit 1; fi
+          # Ensure the base commit (and its ancestry, for merge-base) is present
+          # for the three-dot diff below, in case master advanced past the branch
+          # point. The checkout is already full-history, so this stays non-shallow.
+          git fetch --no-tags origin $env:BASE_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch base commit $env:BASE_SHA." }
 
-          # Extract first matched version like 1.2.3.4
-          VER=$(grep -oP 'Assembly(?:File)?Version\("\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(?="\))' "$FILE" | head -n1)
-          if [ -z "$VER" ]; then echo "Could not parse version from $FILE"; exit 1; fi
+          $required = ./.github/scripts/version-policy.ps1 `
+            -ReportOnly `
+            -BaseRef $env:BASE_SHA `
+            -HeadRef $env:HEAD_SHA `
+            -DiffMode MergeBase
+          if ($required -ne 'true') {
+            Write-Host 'No shipped-code change; nothing to bump.'
+            return
+          }
 
-          IFS='.' read -r MA MI PA BU <<< "$VER"
-          PA=$((PA + 1))
-          BU=0
-          NEW_VERSION="${MA}.${MI}.${PA}.${BU}"
+          # Idempotency / loop guard: a bump this workflow already pushed re-runs
+          # it, but by then AssemblyVersionInfo.cs is part of the PR diff.
+          $changed = @(git diff --name-only "$env:BASE_SHA...$env:HEAD_SHA")
+          if ($changed -contains 'AssemblyVersionInfo.cs') {
+            Write-Host 'AssemblyVersionInfo.cs already updated in this PR; nothing to do.'
+            return
+          }
 
-          echo "Current: $VER -> New: $NEW_VERSION"
+          $file = 'AssemblyVersionInfo.cs'
+          $text = [System.IO.File]::ReadAllText($file)
+          $match = [regex]::Match($text, 'AssemblyVersion\("(?<v>\d+\.\d+\.\d+\.\d+)"\)')
+          if (-not $match.Success) { throw "Could not parse version from $file." }
 
-          # Replace both AssemblyVersion("x.x.x.x") and AssemblyFileVersion("x.x.x.x") occurrences
-          perl -0777 -pe "s/Assembly(File)?Version\(\"[0-9]+(?:\.[0-9]+){3}\"\)/Assembly\$1Version(\"${NEW_VERSION}\")/g" -i "$FILE"
+          $current = [version]$match.Groups['v'].Value
+          # Dependency updates are fixes, so increment the third component and
+          # reset the fourth, matching the repo's version-bump convention.
+          $new = "$($current.Major).$($current.Minor).$($current.Build + 1).0"
+          Write-Host "Bumping AssemblyVersion: $current -> $new"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$FILE"
-          if git commit -m "Bump AssemblyVersion to ${NEW_VERSION} (dependabot auto-bump)"; then
-            echo "Committed version bump"
-            git push origin "HEAD:${{ github.head_ref }}"
-          else
-            echo "No changes to commit"
-          fi
+          $updated = [regex]::Replace(
+            $text,
+            'Assembly(?<kind>File)?Version\("\d+\.\d+\.\d+\.\d+"\)',
+            { param($m) "Assembly$($m.Groups['kind'].Value)Version(""$new"")" }
+          )
+          [System.IO.File]::WriteAllText($file, $updated, [System.Text.UTF8Encoding]::new($false))
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add $file
+          git commit -m "Bump AssemblyVersion to $new for Dependabot update"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit the version bump.' }
+          git push origin "HEAD:$env:GITHUB_HEAD_REF"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push the version bump.' }
