@@ -99,7 +99,7 @@ jobs:
 
       - name: Attest installer provenance
         if: steps.changes.outputs.release_required == 'true' || github.event_name == 'workflow_dispatch'
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-path: Installers/DCSB_*.exe
 
