@@ -34,7 +34,7 @@ jobs:
         run: ./ThirdParty/rnnoise/build-rnnoise.ps1
 
       - name: Attest dll provenance
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: ThirdParty/rnnoise/rnnoise.dll
 
