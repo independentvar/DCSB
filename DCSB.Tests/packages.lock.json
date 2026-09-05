@@ -21,11 +21,11 @@
       },
       "MSTest.TestFramework": {
         "type": "Direct",
-        "requested": "[4.3.0, )",
-        "resolved": "4.3.0",
-        "contentHash": "5g6Bx47jdzsHt0Kf9u9W8z/8ZWixGz2BvO+FVmoLht0yW24Ac9djZ+mvgTqdM9YXdS948ywM8eOtVhRyPio7aw==",
+        "requested": "[4.4.0, )",
+        "resolved": "4.4.0",
+        "contentHash": "sfJzj3ntdU/GahJd2n+WQLgKqbV0RRMJVXtjRwRQLhblevlzLSDAOocOKANhfMaCEQ5dMt6348ztbVq/Ap60xA==",
         "dependencies": {
-          "MSTest.Analyzers": "4.3.0"
+          "MSTest.Analyzers": "4.4.0"
         }
       },
       "Octokit": {
@@ -100,8 +100,8 @@
       },
       "MSTest.Analyzers": {
         "type": "Transitive",
-        "resolved": "4.3.0",
-        "contentHash": "Od+0h98vkWxsDKwk3N7RfS4SHOq2D4imLeCcs5YO2+g8ZsO2+QhymVg7HDoB81J3zA1UEj09PNBdNBGAdNUMNg=="
+        "resolved": "4.4.0",
+        "contentHash": "8g2KL2LjsXXVywvQb0uWQBANOONVnRf6cTSbON9ar6gIw08oSBY7Z3PJlC8sHbqOVvCr7srrcWiKzb12SUoV2w=="
       },
       "NAudio": {
         "type": "Transitive",
