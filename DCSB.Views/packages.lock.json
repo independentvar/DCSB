@@ -22,8 +22,8 @@
       },
       "Microsoft.Xaml.Behaviors.Wpf": {
         "type": "Transitive",
-        "resolved": "1.1.142",
-        "contentHash": "c47wA/8GHiQ9w+O6+mdqrZhZrxHogx2/fSZyRKL9tz0k+ypoTiwOx6fID0X3jr5LnCazJbCk7KiAcL0zVnNgNA=="
+        "resolved": "1.1.158",
+        "contentHash": "TPQyXvLV/p4/RUeSqaEOUE2pBipFlvNVdrAsTd1qgNzBoIEN2UMJHwH0SrcUFVuDWqpZbphjXiZ/fGA9WnmbTg=="
       },
       "NAudio": {
         "type": "Transitive",
@@ -137,7 +137,7 @@
       "dcsb.interactivity": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Xaml.Behaviors.Wpf": "[1.1.142, )"
+          "Microsoft.Xaml.Behaviors.Wpf": "[1.1.158, )"
         }
       },
       "dcsb.models": {
