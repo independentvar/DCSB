@@ -39,12 +39,12 @@
       },
       "NAudio.Vorbis": {
         "type": "Direct",
-        "requested": "[1.5.0, )",
-        "resolved": "1.5.0",
-        "contentHash": "llJMmUnFf0FGf4G1FKNftxt+Vc1CvBCSul0Ugbv/RahGbpKF2p+ujSEJHybPjl9b4FjbK8O2vRFIcRGcVfAooA==",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "k+fa3C/jlf+KvUirBukhxOeOnZD10t6EEXWlRm7qlVddgXlkJhrqDBm5P4DRyP+zna9vH9/uzlPnHHhje97Mnw==",
         "dependencies": {
-          "NAudio.Core": "2.0.0",
-          "NVorbis": "0.10.4"
+          "NAudio.Core": "3.0.1",
+          "NVorbis": "0.10.5"
         }
       },
       "NVorbis": {
@@ -63,8 +63,11 @@
       },
       "NAudio.Core": {
         "type": "Transitive",
-        "resolved": "2.3.0",
-        "contentHash": "jMd7r6dB6tAtXhOYL58ntPqwERNm1/Rhw5MKOIYvsnXzuX+PTGsa2VMam6n0npZYSwlSidKa4GAm4bFcXFUlcg=="
+        "resolved": "3.0.1",
+        "contentHash": "3fJ6UnkoiNBeeczKd9OozvcE85FvtyYCykmfzEbFW0uB0uT2+keKdconUGkz9qYlhaq1RJDTFptXOooQBYLijA==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
       },
       "NAudio.Midi": {
         "type": "Transitive",
@@ -97,6 +100,11 @@
         "dependencies": {
           "NAudio.Core": "2.3.0"
         }
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "hyJB4UlpAi19Xr9AXzu2NuagKC4lPfHObNMEAA0HmqFz2rX7wKgzeYzO/jM/eBHDhnUGFFEjk5cOoJaxqg5J4A=="
       },
       "dcsb.models": {
         "type": "Project",
